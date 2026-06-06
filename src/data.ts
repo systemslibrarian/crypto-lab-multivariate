@@ -78,13 +78,51 @@ export interface SigCompare {
 	scheme: string;
 	pubKey: string;
 	sig: string;
+	feel: string;
 	status: 'standardized' | 'research' | 'broken';
 }
 
+// "feel" gives a non-expert reader a visceral sense of scale: small text
+// strings (the size of one tweet) up to images (a high-res JPG).
 export const SIG_COMPARE: SigCompare[] = [
-	{ family: 'Lattice', scheme: 'ML-DSA-65 (Dilithium)', pubKey: '1.9 KB', sig: '3.3 KB', status: 'standardized' },
-	{ family: 'Lattice', scheme: 'Falcon-512', pubKey: '897 B', sig: '666 B', status: 'standardized' },
-	{ family: 'Hash', scheme: 'SLH-DSA-128f (SPHINCS+)', pubKey: '32 B', sig: '17 KB', status: 'standardized' },
-	{ family: 'Multivariate', scheme: 'Rainbow (Ia)', pubKey: '158 KB', sig: '66 B', status: 'broken' },
-	{ family: 'Multivariate', scheme: 'UOV', pubKey: '278 KB', sig: '128 B', status: 'research' },
+	{
+		family: 'Lattice',
+		scheme: 'ML-DSA-65 (Dilithium)',
+		pubKey: '1.9 KB',
+		sig: '3.3 KB',
+		feel: 'sig ≈ a paragraph of email',
+		status: 'standardized',
+	},
+	{
+		family: 'Lattice',
+		scheme: 'Falcon-512',
+		pubKey: '897 B',
+		sig: '666 B',
+		feel: 'sig ≈ a tweet',
+		status: 'standardized',
+	},
+	{
+		family: 'Hash',
+		scheme: 'SLH-DSA-128f (SPHINCS+)',
+		pubKey: '32 B',
+		sig: '17 KB',
+		feel: 'sig ≈ a small icon',
+		status: 'standardized',
+	},
+	{
+		family: 'Multivariate',
+		scheme: 'Rainbow (Ia)',
+		pubKey: '158 KB',
+		sig: '66 B',
+		feel: 'pubkey ≈ a phone photo · sig fits in 2 tweets',
+		status: 'broken',
+	},
+	{
+		family: 'Multivariate',
+		scheme: 'UOV',
+		pubKey: '278 KB',
+		sig: '128 B',
+		feel: 'pubkey ≈ 2 phone photos · sig fits in 1 tweet',
+		status: 'research',
+	},
 ];

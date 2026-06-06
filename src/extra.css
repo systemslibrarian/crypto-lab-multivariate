@@ -702,6 +702,217 @@
   font-weight: 700;
 }
 
+/* ---- dual-mode text (technical vs plain English) ---- */
+:root:not([data-text-mode='plain']) [data-mode='plain'] { display: none; }
+[data-text-mode='plain'] [data-mode='technical'] { display: none; }
+[data-mode='plain'] em { font-style: italic; color: var(--accent); }
+
+.text-mode-toggle {
+  white-space: nowrap;
+}
+.text-mode-toggle[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--accent) 18%, var(--panel-strong));
+  border-color: color-mix(in oklab, var(--accent) 32%, transparent);
+  color: var(--accent);
+}
+@media (max-width: 520px) {
+  .text-mode-toggle__label {
+    display: none;
+  }
+}
+
+/* ---- benchmark ---- */
+.sign-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 4px;
+}
+.bench-result {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--accent-4) 8%, var(--panel-strong));
+  animation: section-reveal 360ms ease;
+}
+.bench-result[hidden] {
+  display: none;
+}
+.bench-progress {
+  display: grid;
+  gap: 10px;
+}
+.bench-progress__label {
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.bench-progress__bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--mono-block-bg);
+  overflow: hidden;
+}
+.bench-progress__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-4));
+  transition: width 180ms linear;
+}
+.bench-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+.bench-stat {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+}
+.bench-stat__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+.bench-stat__value {
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+.bench-stat__value small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-left: 2px;
+}
+
+/* ---- "Feels like" cell ---- */
+.feel-cell {
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+/* ---- back-to-top floating button ---- */
+.back-to-top {
+  position: fixed;
+  right: calc(env(safe-area-inset-right, 0px) + 18px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  z-index: 25;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--mono-block-bg);
+  color: var(--mono-block-fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.5);
+  animation: section-reveal 220ms ease;
+  transition: transform 200ms ease;
+}
+.back-to-top:hover {
+  transform: translateY(-2px);
+}
+.back-to-top[hidden] {
+  display: none;
+}
+
+/* ---- byte cell visual tooltip ---- */
+.byte-cell {
+  position: relative;
+}
+.byte-cell::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, 4px);
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--mono-block-bg);
+  color: var(--mono-block-fg);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 140ms ease, transform 140ms ease;
+  border: 1px solid color-mix(in oklab, var(--mono-block-fg) 18%, transparent);
+  z-index: 5;
+}
+.byte-cell:hover::after,
+.byte-cell:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---- first-visit pulse hint on Generate ---- */
+.is-first-visit #keygen-btn {
+  animation: keygen-pulse 1600ms ease-in-out infinite;
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent-3) 60%, transparent);
+}
+@keyframes keygen-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent-3) 65%, transparent);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 0 14px color-mix(in oklab, var(--accent-3) 0%, transparent);
+    transform: translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-first-visit #keygen-btn {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-3) 55%, transparent);
+  }
+}
+
+/* ---- trapdoor SVG draw-in + glow ---- */
+.trapdoor-svg .td-rect,
+.trapdoor-svg .td-arrow {
+  stroke-dasharray: 800;
+  stroke-dashoffset: 800;
+  animation: td-draw 1400ms ease forwards;
+}
+.trapdoor-svg .td-rect--easy {
+  animation-delay: 400ms;
+}
+.trapdoor-svg .td-arrow {
+  animation-delay: 350ms;
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+}
+.trapdoor-svg .td-arrowhead {
+  opacity: 0;
+  animation: td-fade 240ms ease 700ms forwards;
+}
+@keyframes td-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes td-fade {
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trapdoor-svg .td-rect,
+  .trapdoor-svg .td-arrow,
+  .trapdoor-svg .td-arrowhead {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
 /* ---- print stylesheet ---- */
 @media print {
   :root {

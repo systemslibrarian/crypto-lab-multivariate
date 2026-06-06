@@ -17,10 +17,22 @@ const hex = (b: number) => b.toString(16).padStart(2, '0').toUpperCase();
 const hexArr = (a: number[]) => a.map(hex).join(' ');
 
 const DEFAULT_MSG = 'For the glory of God — 1 Cor 10:31';
+const FIRST_VISIT_KEY = 'mv-demo-seen-v1';
+const TEXT_MODE_KEY = 'mv-text-mode-v1';
 
-// HSL-based color mapping: each byte gets a deterministic hue. Decorative —
-// the same bytes are also rendered as text and as accessible labels, so
-// colorblind viewers don't lose information.
+// Dual-mode text helpers. CSS hides the variant that doesn't match the
+// current [data-text-mode] on <html>, so both versions are present in DOM
+// for screen readers but only one is rendered at a time.
+function tech(s: string): string {
+	return `<span data-mode="technical">${s}</span>`;
+}
+function plain(s: string): string {
+	return `<span data-mode="plain">${s}</span>`;
+}
+function dual(technical: string, plainEnglish: string): string {
+	return tech(technical) + plain(plainEnglish);
+}
+
 function byteColor(b: number): string {
 	const hue = (b * 137) % 360;
 	return `hsl(${hue}, 62%, 58%)`;
@@ -33,7 +45,8 @@ function byteGrid(
 	const cells = bytes
 		.map((b, i) => {
 			const isTamper = options.tamperedIndex === i;
-			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}; --idx: ${i}" aria-label="Byte ${i + 1}: ${hex(b)}${isTamper ? ', tampered' : ''}">
+			const tooltip = `Byte ${i + 1}: ${hex(b)}${isTamper ? ' · tampered' : ''}`;
+			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}; --idx: ${i}" aria-label="${tooltip}" data-tooltip="${tooltip}" tabindex="-1">
 				<span class="byte-cell__hex" aria-hidden="true">${hex(b)}</span>
 			</span>`;
 		})
@@ -80,9 +93,6 @@ function fmtMs(ms: number): string {
 	return `${(ms / 1000).toFixed(2)} s`;
 }
 
-// FNV-1a over all upper-triangular bytes of the public map; expanded to
-// 12 sample bytes so the fingerprint is visually substantial without leaking
-// raw key data.
 function pubKeyFingerprint(P: Quad[], n: number): number[] {
 	let h = 0x811c9dc5;
 	for (const Q of P) {
@@ -102,7 +112,6 @@ function pubKeyFingerprint(P: Quad[], n: number): number[] {
 	return out;
 }
 
-// --- URL state -------------------------------------------------------------
 interface DemoState {
 	v: number;
 	o: number;
@@ -134,11 +143,12 @@ function writeUrlState(state: DemoState): void {
 			history.replaceState(null, '', hash);
 		}
 	} catch {
-		/* ignore quota / hash limits */
+		/* ignore */
 	}
 }
 
 function trapdoorSvg(): string {
+	// SVG strokes use animated dash offsets to "draw in" on first paint.
 	return `<svg class="trapdoor-svg" viewBox="0 0 320 220" aria-hidden="true" focusable="false">
 		<defs>
 			<linearGradient id="tdGrad" x1="0" x2="1" y1="0" y2="1">
@@ -149,13 +159,17 @@ function trapdoorSvg(): string {
 				<stop offset="0%" stop-color="var(--accent-2)" />
 				<stop offset="100%" stop-color="var(--accent-3)" />
 			</linearGradient>
+			<filter id="tdGlow" x="-20%" y="-20%" width="140%" height="140%">
+				<feGaussianBlur stdDeviation="2" result="blur" />
+				<feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+			</filter>
 		</defs>
-		<rect x="14" y="14" width="292" height="86" rx="14" fill="none" stroke="url(#tdHard)" stroke-width="2" stroke-dasharray="6 5" />
+		<rect class="td-rect td-rect--hard" x="14" y="14" width="292" height="86" rx="14" fill="none" stroke="url(#tdHard)" stroke-width="2" stroke-dasharray="6 5" />
 		<text x="160" y="46" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--ink-strong)">Public map P(x) — nonlinear</text>
 		<text x="160" y="72" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">solving for x is NP-hard</text>
-		<line x1="160" y1="106" x2="160" y2="128" stroke="var(--accent-3)" stroke-width="2" stroke-dasharray="3 3" />
-		<polygon points="155,124 165,124 160,134" fill="var(--accent-3)" />
-		<rect x="14" y="138" width="292" height="68" rx="14" fill="none" stroke="url(#tdGrad)" stroke-width="2" />
+		<line class="td-arrow" x1="160" y1="106" x2="160" y2="128" stroke="var(--accent-3)" stroke-width="2" stroke-dasharray="3 3" />
+		<polygon class="td-arrowhead" points="155,124 165,124 160,134" fill="var(--accent-3)" />
+		<rect class="td-rect td-rect--easy" x="14" y="138" width="292" height="68" rx="14" fill="none" stroke="url(#tdGrad)" stroke-width="2" filter="url(#tdGlow)" />
 		<text x="160" y="165" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--ink-strong)">Fix vinegar → linear in oil</text>
 		<text x="160" y="188" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--accent-4)">trapdoor: signer solves an o×o system</text>
 	</svg>`;
@@ -170,6 +184,10 @@ function renderHero(): HTMLElement {
         <span aria-hidden="true">⚙</span> crypto-lab · portfolio
       </a>
       <div class="hero-toolbar__right">
+        <button id="text-mode-toggle" class="ghost-button ghost-button--small text-mode-toggle" type="button" aria-pressed="false" aria-label="Toggle plain English explanations">
+          <span aria-hidden="true">📖</span>
+          <span class="text-mode-toggle__label">Plain English</span>
+        </button>
         <button id="share-btn" class="icon-button" type="button" aria-label="Copy shareable demo URL" title="Copy shareable URL">
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11Z"/></svg>
         </button>
@@ -184,13 +202,18 @@ function renderHero(): HTMLElement {
     <div class="hero-copy">
       <p class="eyebrow">Post-Quantum · Multivariate</p>
       <h1>Oil <span class="hero-amp" aria-hidden="true">&amp;</span><span class="sr-only">and</span> Vinegar</h1>
-      <p class="hero-text">
-        Multivariate cryptography builds signatures on the hardness of solving systems of
-        quadratic equations. This lab runs a real, working Unbalanced Oil-and-Vinegar (UOV)
-        scheme over GF(256) in your browser — sign a message, watch the trapdoor turn a
-        hard nonlinear problem into an easy linear one, then see why Rainbow, the layered
-        version, was broken on a laptop in 2022.
-      </p>
+      <p class="hero-text">${dual(
+				`Multivariate cryptography builds signatures on the hardness of solving systems of
+				quadratic equations. This lab runs a real, working Unbalanced Oil-and-Vinegar (UOV)
+				scheme over GF(256) in your browser — sign a message, watch the trapdoor turn a
+				hard nonlinear problem into an easy linear one, then see why Rainbow, the layered
+				version, was broken on a laptop in 2022.`,
+				`Digital signatures prove a message really came from you. This page does it with
+				a method called <em>Oil and Vinegar</em>: there's a math puzzle that looks
+				impossible to outsiders, but the signer holds a secret shortcut. Below, you sign
+				a message in your browser, then see how a researcher cracked the famous
+				&ldquo;Rainbow&rdquo; version in a single weekend in 2022.`,
+			)}</p>
       <div class="hero-actions">
         <a class="action-button action-button--small" href="#playground-heading">
           <span aria-hidden="true">▶</span> Try the demo
@@ -200,19 +223,26 @@ function renderHero(): HTMLElement {
         </a>
       </div>
       <details class="why-details">
-        <summary>Why study a broken family?</summary>
-        <p>
-          Multivariate schemes produce the shortest signatures of any post-quantum family, yet
-          their trapdoors keep falling to structural attacks. Understanding exactly how Rainbow
-          broke is the clearest way to see why NIST chose less-structured lattice assumptions for
-          its primary standards.
-        </p>
+        <summary>${dual('Why study a broken family?', 'Why care about a system that broke?')}</summary>
+        <p>${dual(
+					`Multivariate schemes produce the shortest signatures of any post-quantum family, yet
+					their trapdoors keep falling to structural attacks. Understanding exactly how Rainbow
+					broke is the clearest way to see why NIST chose less-structured lattice assumptions for
+					its primary standards.`,
+					`These signatures are the smallest of the bunch — which is great for tiny devices.
+					But the secret-shortcut keeps turning out to be guessable. Watching exactly how
+					that happened in 2022 shows why the standards bodies picked a different, sturdier
+					math problem (lattices) for the official replacements.`,
+				)}</p>
       </details>
     </div>
     <aside class="hero-metric-card" aria-label="How the trapdoor works">
       <p class="hero-metric-label">The MQ trapdoor</p>
       ${trapdoorSvg()}
-      <p class="hero-metric-note">NP-hard in general · easy if you know which variables are oil</p>
+      <p class="hero-metric-note">${dual(
+				'NP-hard in general · easy if you know which variables are oil',
+				'Looks impossible · easy with the secret',
+			)}</p>
     </aside>
     <div id="shortcuts-panel" class="shortcuts-panel" aria-label="Keyboard shortcuts" hidden>
       <div class="shortcuts-panel__inner">
@@ -221,7 +251,9 @@ function renderHero(): HTMLElement {
           <li><kbd>G</kbd> Generate new keypair</li>
           <li><kbd>S</kbd> Sign current message</li>
           <li><kbd>V</kbd> Verify as-is</li>
+          <li><kbd>B</kbd> Run benchmark (200 signatures)</li>
           <li><kbd>T</kbd> Toggle theme</li>
+          <li><kbd>P</kbd> Toggle plain-English mode</li>
           <li><kbd>?</kbd> Show / hide this panel</li>
           <li><kbd>Esc</kbd> Close this panel</li>
         </ul>
@@ -232,7 +264,6 @@ function renderHero(): HTMLElement {
 	return hero;
 }
 
-// --- Section navigation ----------------------------------------------------
 function renderSectionNav(): HTMLElement {
 	const nav = el('nav', 'section-nav');
 	nav.setAttribute('aria-label', 'Section navigation');
@@ -247,7 +278,6 @@ function renderSectionNav(): HTMLElement {
 	return nav;
 }
 
-// --- Live UOV playground ---------------------------------------------------
 function renderPlayground(): HTMLElement {
 	const section = el('section', 'lab-section');
 	section.id = 'playground';
@@ -256,11 +286,13 @@ function renderPlayground(): HTMLElement {
     <div class="section-heading-row">
       <div>
         <p class="section-kicker">Live demo</p>
-        <h2 id="playground-heading">Sign with the Trapdoor</h2>
-        <p class="section-footnote">
-          A real UOV scheme with v vinegar and o oil variables over GF(256). Keys, signing,
-          and verification all run client-side. Teaching parameters — not production-secure.
-        </p>
+        <h2 id="playground-heading">${dual('Sign with the Trapdoor', 'Sign a message — with a secret')}</h2>
+        <p class="section-footnote">${dual(
+					`A real UOV scheme with v vinegar and o oil variables over GF(256). Keys, signing,
+					and verification all run client-side. Teaching parameters — not production-secure.`,
+					`A real signature system, running right here in your browser. Tweak the knobs,
+					sign a sentence, then try to forge it.`,
+				)}</p>
       </div>
       <div class="timing-strip" role="group" aria-label="Latest operation timings">
         <div class="timing-pill" data-timing="keygen"><span class="timing-pill__label">Keygen</span><span class="timing-pill__value" id="t-keygen">—</span></div>
@@ -272,14 +304,17 @@ function renderPlayground(): HTMLElement {
     <div class="playground-grid">
       <div class="panel-card panel-card--wide" aria-labelledby="step-1-heading">
         <div class="panel-header">
-          <h3 id="step-1-heading"><span class="step-num" aria-hidden="true">1</span> Message &amp; parameters</h3>
+          <h3 id="step-1-heading"><span class="step-num" aria-hidden="true">1</span> ${dual('Message &amp; parameters', 'Pick a message')}</h3>
           <button id="reset-btn" class="ghost-button ghost-button--small" type="button" title="Reset playground to defaults">
             <span aria-hidden="true">↺</span> Reset
           </button>
         </div>
-        <label for="msg" class="field-label">Message to sign</label>
+        <label for="msg" class="field-label">${dual('Message to sign', 'Your message')}</label>
         <textarea id="msg" class="message-input" rows="2" aria-describedby="msg-help" autocomplete="off" spellcheck="false">${DEFAULT_MSG}</textarea>
-        <p id="msg-help" class="field-help">Change the message and watch the target hash change with it.</p>
+        <p id="msg-help" class="field-help">${dual(
+					'Change the message and watch the target hash change with it.',
+					'Type anything. The hash beside it changes with every keystroke.',
+				)}</p>
 
         <div class="param-row" role="group" aria-label="UOV parameters">
           <label for="vsel">
@@ -296,21 +331,30 @@ function renderPlayground(): HTMLElement {
             <span>Generate</span> <kbd class="kbd-hint" aria-hidden="true">G</kbd>
           </button>
         </div>
-        <p id="param-help" class="field-help">v &gt; o gives the &ldquo;unbalanced&rdquo; structure that resists the 1998 Kipnis–Shamir attack.</p>
+        <p id="param-help" class="field-help">${dual(
+					'v &gt; o gives the &ldquo;unbalanced&rdquo; structure that resists the 1998 Kipnis–Shamir attack.',
+					'More vinegar than oil is what keeps this safe. Equal amounts was broken in 1998.',
+				)}</p>
         <p id="key-status" class="panel-copy" role="status" aria-live="polite">No keypair yet — generate one to begin.</p>
 
         <div class="fingerprint-row">
-          <span class="fingerprint-row__label">Public key fingerprint</span>
+          <span class="fingerprint-row__label">${dual('Public key fingerprint', "Verifier's stamp")}</span>
           <div id="pk-fingerprint" class="fingerprint-grid"></div>
-          <p class="field-help fingerprint-row__hint">A 12-byte FNV hash of the public map — what the verifier holds on to.</p>
+          <p class="field-help fingerprint-row__hint">${dual(
+						'A 12-byte FNV hash of the public map — what the verifier holds on to.',
+						"A short summary the verifier holds. It changes completely each time you regenerate.",
+					)}</p>
         </div>
       </div>
 
       <div class="panel-card" aria-labelledby="step-2-heading">
         <div class="panel-header">
-          <h3 id="step-2-heading"><span class="step-num" aria-hidden="true">2</span> Message hash (target)</h3>
+          <h3 id="step-2-heading"><span class="step-num" aria-hidden="true">2</span> ${dual('Message hash (target)', 'Message → target')}</h3>
         </div>
-        <p class="panel-copy">The message hashes to an o-byte target the signature must hit.</p>
+        <p class="panel-copy">${dual(
+					'The message hashes to an o-byte target the signature must hit.',
+					'Your message gets squashed into a short fingerprint. The signature has to land exactly here.',
+				)}</p>
         <div class="byte-grid-wrap">
           <div id="target-byte-grid" class="byte-grid-host" aria-live="polite"></div>
           ${copyButton('target-byte-grid', 'Copy target hash hex')}
@@ -321,48 +365,78 @@ function renderPlayground(): HTMLElement {
         <div class="panel-header">
           <h3 id="step-3-heading"><span class="step-num" aria-hidden="true">3</span> Sign</h3>
         </div>
-        <p class="panel-copy">Guess vinegar → the system goes linear in oil → solve.</p>
-        <button id="sign-btn" class="action-button" type="button" disabled aria-describedby="sign-help" aria-keyshortcuts="s">
-          <span aria-hidden="true">✍</span> <span>Sign message</span> <kbd class="kbd-hint" aria-hidden="true">S</kbd>
-        </button>
-        <p id="sign-help" class="field-help">Produces a fresh signature — vinegar is randomised each time.</p>
-        <div id="trace-out" class="trace-out" aria-live="polite">
-          <p class="trace-empty">No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.</p>
+        <p class="panel-copy">${dual(
+					'Guess vinegar → the system goes linear in oil → solve.',
+					'Pick random vinegar, the puzzle collapses into normal high-school algebra, solve it.',
+				)}</p>
+        <div class="sign-controls">
+          <button id="sign-btn" class="action-button" type="button" disabled aria-describedby="sign-help" aria-keyshortcuts="s">
+            <span aria-hidden="true">✍</span> <span>Sign</span> <kbd class="kbd-hint" aria-hidden="true">S</kbd>
+          </button>
+          <button id="bench-btn" class="ghost-button ghost-button--small" type="button" disabled aria-keyshortcuts="b" aria-label="Run a benchmark of 200 signatures">
+            <span aria-hidden="true">⏱</span> <span>Benchmark</span> <kbd class="kbd-hint" aria-hidden="true">B</kbd>
+          </button>
         </div>
+        <p id="sign-help" class="field-help">${dual(
+					'Produces a fresh signature — vinegar is randomised each time.',
+					'Each click makes a brand-new signature. Same message, different signature, still valid.',
+				)}</p>
+        <div id="trace-out" class="trace-out" aria-live="polite">
+          <p class="trace-empty">${dual(
+						'No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.',
+						'Nothing signed yet. Hit <kbd>S</kbd> or the Sign button to watch the secret shortcut produce a signature, byte by byte.',
+					)}</p>
+        </div>
+        <div id="bench-result" class="bench-result" hidden></div>
       </div>
 
       <div class="panel-card panel-card--wide" aria-labelledby="step-4-heading">
         <div class="panel-header">
           <h3 id="step-4-heading"><span class="step-num" aria-hidden="true">4</span> Verify</h3>
+          <button id="verify-all-btn" class="ghost-button ghost-button--small" type="button" disabled title="Run all three verification scenarios">
+            <span aria-hidden="true">⟳</span> ${dual('Run all', 'Try all three')}
+          </button>
         </div>
-        <p class="panel-copy">A signature must satisfy P(signature) = target. Try to break that bond.</p>
+        <p class="panel-copy">${dual(
+					'A signature must satisfy P(signature) = target. Try to break that bond.',
+					'A real signature has to match the target exactly. Watch what happens when you mess with anything.',
+				)}</p>
         <ul class="scenario-grid" role="list">
           <li class="scenario-card" data-scenario="ok">
             <div class="scenario-card__header">
-              <h4>Valid signature</h4>
+              <h4>${dual('Valid signature', 'As-is')}</h4>
               <span class="scenario-card__icon" aria-hidden="true">✓</span>
             </div>
-            <p class="scenario-copy">Check the signature against the original target.</p>
+            <p class="scenario-copy">${dual(
+							'Check the signature against the original target.',
+							"Verify exactly what we signed — should pass.",
+						)}</p>
             <button id="verify-ok" class="ghost-button" type="button" disabled aria-keyshortcuts="v">Verify as-is</button>
             <p id="verify-ok-status" class="scenario-status scenario-status--pending" role="status" aria-live="polite">Awaiting signature</p>
           </li>
           <li class="scenario-card" data-scenario="bad">
             <div class="scenario-card__header">
-              <h4>Tampered signature</h4>
+              <h4>${dual('Tampered signature', 'Flipped byte')}</h4>
               <span class="scenario-card__icon" aria-hidden="true">⚡</span>
             </div>
-            <p class="scenario-copy">Flip a single byte in the signature.</p>
-            <button id="verify-bad" class="ghost-button" type="button" disabled>Flip one byte &amp; verify</button>
+            <p class="scenario-copy">${dual(
+							'Flip a single byte in the signature.',
+							"Change one tiny byte in the signature — should fail.",
+						)}</p>
+            <button id="verify-bad" class="ghost-button" type="button" disabled>${dual('Flip one byte &amp; verify', 'Flip a byte')}</button>
             <div id="verify-bad-detail" class="scenario-detail" aria-hidden="true"></div>
             <p id="verify-bad-status" class="scenario-status scenario-status--pending" role="status" aria-live="polite">Awaiting signature</p>
           </li>
           <li class="scenario-card" data-scenario="msg">
             <div class="scenario-card__header">
-              <h4>Tampered message</h4>
+              <h4>${dual('Tampered message', 'Edited message')}</h4>
               <span class="scenario-card__icon" aria-hidden="true">✎</span>
             </div>
-            <p class="scenario-copy">Re-hash an edited message and verify the old signature.</p>
-            <button id="verify-msg" class="ghost-button" type="button" disabled>Change message &amp; verify</button>
+            <p class="scenario-copy">${dual(
+							'Re-hash an edited message and verify the old signature.',
+							"Change the message itself, then check the old signature — should fail.",
+						)}</p>
+            <button id="verify-msg" class="ghost-button" type="button" disabled>${dual('Change message &amp; verify', 'Edit message')}</button>
             <p id="verify-msg-status" class="scenario-status scenario-status--pending" role="status" aria-live="polite">Awaiting signature</p>
           </li>
         </ul>
@@ -379,9 +453,11 @@ function renderPlayground(): HTMLElement {
 	const vsel = $('vsel') as HTMLSelectElement;
 	const osel = $('osel') as HTMLSelectElement;
 	const signBtn = $('sign-btn') as HTMLButtonElement;
+	const benchBtn = $('bench-btn') as HTMLButtonElement;
 	const okBtn = $('verify-ok') as HTMLButtonElement;
 	const badBtn = $('verify-bad') as HTMLButtonElement;
 	const msgBtn = $('verify-msg') as HTMLButtonElement;
+	const verifyAllBtn = $('verify-all-btn') as HTMLButtonElement;
 	const resetBtn = $('reset-btn') as HTMLButtonElement;
 	const keygenBtn = $('keygen-btn') as HTMLButtonElement;
 
@@ -439,7 +515,6 @@ function renderPlayground(): HTMLElement {
 		const o = parseInt(osel.value, 10);
 		keygenBtn.classList.add('is-busy');
 		keygenBtn.disabled = true;
-		// yield so the spinner has a chance to paint before we block the main thread
 		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 		await new Promise<void>((resolve) => setTimeout(resolve, 0));
 		try {
@@ -454,11 +529,18 @@ function renderPlayground(): HTMLElement {
 			refreshTarget();
 			renderFingerprint();
 			signBtn.disabled = false;
-			[okBtn, badBtn, msgBtn].forEach((b) => (b.disabled = true));
-			$('trace-out').innerHTML = `<p class="trace-empty">No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.</p>`;
+			benchBtn.disabled = false;
+			[okBtn, badBtn, msgBtn, verifyAllBtn].forEach((b) => (b.disabled = true));
+			$('trace-out').innerHTML = `<p class="trace-empty">${dual(
+				'No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.',
+				'Nothing signed yet. Hit <kbd>S</kbd> or the Sign button to watch the secret shortcut produce a signature, byte by byte.',
+			)}</p>`;
+			$('bench-result').setAttribute('hidden', '');
+			$('bench-result').innerHTML = '';
 			clearVerifyState();
 			announce(`Keypair generated with ${v} vinegar and ${o} oil variables in ${fmtMs(dt)}.`);
 			persistState();
+			markFirstVisitSeen();
 		} finally {
 			keygenBtn.classList.remove('is-busy');
 			keygenBtn.disabled = false;
@@ -486,8 +568,62 @@ function renderPlayground(): HTMLElement {
         ${copyButton('trace-signature', 'Copy signature hex')}
       </div>
       <p class="section-footnote">Found a solvable system after ${trace.attempts} vinegar guess${trace.attempts === 1 ? '' : 'es'}. Signing is fast because fixing vinegar makes the equations linear.</p>`;
-		[okBtn, badBtn, msgBtn].forEach((b) => (b.disabled = false));
+		[okBtn, badBtn, msgBtn, verifyAllBtn].forEach((b) => (b.disabled = false));
 		announce(`Message signed in ${fmtMs(dt)} after ${trace.attempts} attempt${trace.attempts === 1 ? '' : 's'}. Verification options enabled.`);
+	}
+
+	async function doBenchmark(): Promise<void> {
+		if (!keys) return;
+		const N = 200;
+		const result = $('bench-result');
+		result.removeAttribute('hidden');
+		result.innerHTML = `<div class="bench-progress">
+			<div class="bench-progress__label">Running ${N} signatures…</div>
+			<div class="bench-progress__bar"><div class="bench-progress__fill" id="bench-fill" style="width: 0%"></div></div>
+		</div>`;
+		benchBtn.disabled = true;
+		signBtn.disabled = true;
+		await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+		const timings: number[] = [];
+		const attempts: number[] = [];
+		let totalT = 0;
+		const chunk = 25;
+		for (let i = 0; i < N; i += chunk) {
+			const end = Math.min(i + chunk, N);
+			const chunkStart = performance.now();
+			for (let k = i; k < end; k++) {
+				const t0 = performance.now();
+				const t = sign(keys, hashMessage(msg.value + ' #' + k, keys.params.o));
+				const dt = performance.now() - t0;
+				timings.push(dt);
+				attempts.push(t.attempts);
+			}
+			totalT += performance.now() - chunkStart;
+			const fill = document.getElementById('bench-fill') as HTMLElement | null;
+			if (fill) fill.style.width = `${(end / N) * 100}%`;
+			await new Promise((r) => setTimeout(r, 0));
+		}
+
+		const avg = totalT / N;
+		const min = Math.min(...timings);
+		const max = Math.max(...timings);
+		const sigsPerSec = 1000 / avg;
+		const avgAttempts = attempts.reduce((a, b) => a + b, 0) / N;
+
+		result.innerHTML = `
+			<div class="bench-grid">
+				<div class="bench-stat"><span class="bench-stat__label">Throughput</span><span class="bench-stat__value">${sigsPerSec.toFixed(0)}<small> sig/s</small></span></div>
+				<div class="bench-stat"><span class="bench-stat__label">Avg / sign</span><span class="bench-stat__value">${fmtMs(avg)}</span></div>
+				<div class="bench-stat"><span class="bench-stat__label">Min</span><span class="bench-stat__value">${fmtMs(min)}</span></div>
+				<div class="bench-stat"><span class="bench-stat__label">Max</span><span class="bench-stat__value">${fmtMs(max)}</span></div>
+				<div class="bench-stat"><span class="bench-stat__label">Avg attempts</span><span class="bench-stat__value">${avgAttempts.toFixed(2)}</span></div>
+				<div class="bench-stat"><span class="bench-stat__label">Total</span><span class="bench-stat__value">${fmtMs(totalT)}</span></div>
+			</div>
+			<p class="section-footnote">Benchmark over ${N} signatures on this device. Vinegar is re-randomised each round, so attempt counts vary.</p>`;
+		announce(`Benchmark complete: ${sigsPerSec.toFixed(0)} signatures per second, average ${fmtMs(avg)}.`);
+		benchBtn.disabled = false;
+		signBtn.disabled = false;
 	}
 
 	function setStatus(scenario: 'ok' | 'bad' | 'msg', ok: boolean, text: string): void {
@@ -514,6 +650,9 @@ function renderPlayground(): HTMLElement {
 		void doKeygen();
 	});
 	signBtn.addEventListener('click', doSign);
+	benchBtn.addEventListener('click', () => {
+		void doBenchmark();
+	});
 	resetBtn.addEventListener('click', () => {
 		msg.value = DEFAULT_MSG;
 		vsel.value = '6';
@@ -556,19 +695,21 @@ function renderPlayground(): HTMLElement {
 		const ok = withVerifyTime(() => verify(keys!, otherTarget, trace!.signature));
 		setStatus('msg', ok, ok ? 'Valid (unexpected!)' : '✗ Rejected — signature is bound to the message');
 	});
+	verifyAllBtn.addEventListener('click', () => {
+		okBtn.click();
+		window.setTimeout(() => badBtn.click(), 220);
+		window.setTimeout(() => msgBtn.click(), 440);
+	});
 
-	// hydrate from URL hash if present
 	const url = readUrlState();
 	if (url.v != null) vsel.value = String(url.v);
 	if (url.o != null) osel.value = String(url.o);
 	if (url.m != null) msg.value = url.m;
 
-	// auto-run once so the page is alive on load
 	queueMicrotask(() => {
 		void doKeygen();
 	});
 
-	// keyboard shortcuts
 	document.addEventListener('keydown', (event) => {
 		const t = event.target as HTMLElement;
 		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
@@ -585,13 +726,15 @@ function renderPlayground(): HTMLElement {
 		} else if (key === 'v' && !okBtn.disabled) {
 			event.preventDefault();
 			okBtn.click();
+		} else if (key === 'b' && !benchBtn.disabled) {
+			event.preventDefault();
+			void doBenchmark();
 		}
 	});
 
 	return section;
 }
 
-// --- Beullens attack walkthrough -------------------------------------------
 function renderAttack(): HTMLElement {
 	const section = el('section', 'lab-section');
 	section.id = 'attack';
@@ -623,7 +766,6 @@ function renderAttack(): HTMLElement {
 	return section;
 }
 
-// --- comparison table ------------------------------------------------------
 function renderCompare(): HTMLElement {
 	const section = el('section', 'lab-section');
 	section.id = 'compare';
@@ -635,6 +777,7 @@ function renderCompare(): HTMLElement {
       <td data-label="Scheme"><strong>${r.scheme}</strong></td>
       <td class="mono-cell" data-label="Public key">${r.pubKey}</td>
       <td class="mono-cell" data-label="Signature">${r.sig}</td>
+      <td data-label="Feels like" class="feel-cell">${r.feel}</td>
       <td data-label="Status">${statusChip(r.status)}</td>
     </tr>`,
 	).join('');
@@ -643,17 +786,20 @@ function renderCompare(): HTMLElement {
       <div>
         <p class="section-kicker">Tradeoff</p>
         <h2 id="compare-heading">Tiny Signatures, Huge Keys</h2>
-        <p class="section-footnote">
-          Multivariate schemes have the smallest signatures of any post-quantum family — but
-          public keys in the hundreds of kilobytes, and a track record of structural breaks.
-          Compare against the standardised lattice and hash families.
-        </p>
+        <p class="section-footnote">${dual(
+					`Multivariate schemes have the smallest signatures of any post-quantum family — but
+					public keys in the hundreds of kilobytes, and a track record of structural breaks.
+					Compare against the standardised lattice and hash families.`,
+					`Multivariate signatures are the smallest of any post-quantum option — but the
+					"public" half of the key can be the size of a phone photo, and the math has
+					broken more than once.`,
+				)}</p>
       </div>
     </div>
     <div class="table-shell" role="region" aria-label="Signature size comparison across PQC families" tabindex="0">
       <table class="math-table">
-        <caption class="sr-only">Comparison of post-quantum signature families: family, scheme name, public key size, signature size, and standardisation status.</caption>
-        <thead><tr><th scope="col">Family</th><th scope="col">Scheme</th><th scope="col">Public key</th><th scope="col">Signature</th><th scope="col">Status</th></tr></thead>
+        <caption class="sr-only">Comparison of post-quantum signature families: family, scheme name, public key size, signature size, an everyday-object analogy, and standardisation status.</caption>
+        <thead><tr><th scope="col">Family</th><th scope="col">Scheme</th><th scope="col">Public key</th><th scope="col">Signature</th><th scope="col">Feels like</th><th scope="col">Status</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -662,7 +808,6 @@ function renderCompare(): HTMLElement {
 	return section;
 }
 
-// --- scheme cards ----------------------------------------------------------
 function renderSchemes(): HTMLElement {
 	const section = el('section', 'lab-section');
 	section.id = 'schemes';
@@ -714,6 +859,18 @@ function renderFooter(): HTMLElement {
     <p class="scripture">“So whether you eat or drink or whatever you do, do it all for the glory of God.” — 1 Corinthians 10:31</p>
   `;
 	return footer;
+}
+
+function renderBackToTop(): HTMLElement {
+	const btn = el('button', 'back-to-top');
+	btn.type = 'button';
+	btn.setAttribute('aria-label', 'Scroll back to top');
+	btn.hidden = true;
+	btn.innerHTML = `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4 4 12h5v8h6v-8h5L12 4Z"/></svg>`;
+	btn.addEventListener('click', () => {
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	});
+	return btn;
 }
 
 function wireCopyButtons(root: HTMLElement): void {
@@ -858,6 +1015,95 @@ function wireScrollReveal(root: HTMLElement): void {
 	items.forEach((it) => observer.observe(it));
 }
 
+function wireBackToTop(btn: HTMLElement): void {
+	let visible = false;
+	const update = () => {
+		const shouldShow = window.scrollY > 600;
+		if (shouldShow !== visible) {
+			visible = shouldShow;
+			btn.hidden = !shouldShow;
+		}
+	};
+	window.addEventListener('scroll', update, { passive: true });
+	update();
+}
+
+function applyTextMode(mode: 'technical' | 'plain'): void {
+	document.documentElement.setAttribute('data-text-mode', mode);
+	const btn = document.getElementById('text-mode-toggle');
+	if (btn) {
+		btn.setAttribute('aria-pressed', String(mode === 'plain'));
+		const label = btn.querySelector('.text-mode-toggle__label');
+		if (label) label.textContent = mode === 'plain' ? 'Technical' : 'Plain English';
+	}
+	try {
+		localStorage.setItem(TEXT_MODE_KEY, mode);
+	} catch {
+		/* ignore */
+	}
+}
+
+function wireTextModeToggle(): void {
+	let saved: string | null = null;
+	try {
+		saved = localStorage.getItem(TEXT_MODE_KEY);
+	} catch {
+		/* ignore */
+	}
+	const initial: 'technical' | 'plain' = saved === 'plain' ? 'plain' : 'technical';
+	applyTextMode(initial);
+	const btn = document.getElementById('text-mode-toggle');
+	btn?.addEventListener('click', () => {
+		const current = document.documentElement.getAttribute('data-text-mode');
+		applyTextMode(current === 'plain' ? 'technical' : 'plain');
+		announce(`Switched to ${current === 'plain' ? 'technical' : 'plain English'} text.`);
+	});
+	document.addEventListener('keydown', (event) => {
+		const t = event.target as HTMLElement;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+		if (event.altKey || event.ctrlKey || event.metaKey) return;
+		if (event.key.toLowerCase() === 'p') {
+			event.preventDefault();
+			(btn as HTMLButtonElement | null)?.click();
+		}
+	});
+}
+
+let firstVisitSeen = false;
+function markFirstVisitSeen(): void {
+	if (firstVisitSeen) return;
+	firstVisitSeen = true;
+	document.documentElement.classList.remove('is-first-visit');
+	try {
+		localStorage.setItem(FIRST_VISIT_KEY, '1');
+	} catch {
+		/* ignore */
+	}
+}
+
+function wireFirstVisitHint(): void {
+	let already = false;
+	try {
+		already = !!localStorage.getItem(FIRST_VISIT_KEY);
+	} catch {
+		/* ignore */
+	}
+	if (already) {
+		firstVisitSeen = true;
+		return;
+	}
+	document.documentElement.classList.add('is-first-visit');
+	const dismissOnInteract = () => {
+		markFirstVisitSeen();
+		window.removeEventListener('pointerdown', dismissOnInteract, true);
+		window.removeEventListener('keydown', dismissOnInteract, true);
+	};
+	window.addEventListener('pointerdown', dismissOnInteract, true);
+	window.addEventListener('keydown', dismissOnInteract, true);
+	// also auto-dismiss after 12 seconds so it doesn't loop forever
+	window.setTimeout(markFirstVisitSeen, 12000);
+}
+
 export function mountApp(root: HTMLDivElement): void {
 	const main = el('main', 'page-shell');
 	main.id = 'main-content';
@@ -871,10 +1117,15 @@ export function mountApp(root: HTMLDivElement): void {
 	const footer = renderFooter();
 	main.append(hero, nav, playground, attack, schemes, compare, footer);
 	root.appendChild(main);
+	const backToTop = renderBackToTop();
+	document.body.appendChild(backToTop);
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
 	wireShareButton();
 	wireSectionNavObserver(nav, [playground, attack, schemes, compare]);
 	wireScrollReveal(main);
-	void evalMap; // referenced for potential debugging hooks
+	wireBackToTop(backToTop);
+	wireTextModeToggle();
+	wireFirstVisitHint();
+	void evalMap;
 }

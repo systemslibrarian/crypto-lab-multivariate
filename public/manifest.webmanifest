@@ -1,0 +1,27 @@
+{
+  "name": "Oil & Vinegar — Multivariate Crypto Lab",
+  "short_name": "Oil & Vinegar",
+  "description": "Interactive post-quantum multivariate (UOV) signature demo with a visualized trapdoor.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#12101a",
+  "theme_color": "#0b6f96",
+  "orientation": "any",
+  "lang": "en",
+  "categories": ["education", "developer", "utilities"],
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
