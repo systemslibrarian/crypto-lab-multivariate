@@ -259,19 +259,21 @@ export function verify(keys: UovKeys, target: number[], signature: number[]): bo
 	return got.length === target.length && got.every((g, i) => g === target[i]);
 }
 
-// hash a message string to an o-byte target (toy hash; FNV-style, good enough for a demo)
+// hash a message string to an o-byte target (toy FNV-1a; teaching only).
+// Use Math.imul for the FNV multiply: h * 0x01000193 exceeds 2^53, so plain
+// JS multiplication silently loses precision in the low bits.
 export function hashMessage(msg: string, o: number): number[] {
 	const out = new Array(o).fill(0);
 	let h = 0x811c9dc5;
 	for (let i = 0; i < msg.length; i++) {
 		h ^= msg.charCodeAt(i);
-		h = (h * 0x01000193) >>> 0;
+		h = Math.imul(h, 0x01000193) >>> 0;
 		out[i % o] = gadd(out[i % o], h & 0xff);
 	}
 	// extra diffusion pass so short messages still fill all o bytes
 	for (let r = 0; r < o; r++) {
-		h ^= (r + 1) * 0x9e3779b1;
-		h = (h * 0x01000193) >>> 0;
+		h ^= Math.imul(r + 1, 0x9e3779b1) >>> 0;
+		h = Math.imul(h, 0x01000193) >>> 0;
 		out[r] = gadd(out[r], h & 0xff);
 	}
 	return out;

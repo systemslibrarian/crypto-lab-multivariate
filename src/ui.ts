@@ -929,7 +929,10 @@ function renderPlayground(): HTMLElement {
 		}
 		if (event.altKey || event.ctrlKey || event.metaKey) return;
 		const key = event.key.toLowerCase();
-		if (key === 'g') {
+		if (key === 'g' && !keygenBtn.disabled) {
+			// match S/V/B: don't fire while a previous keygen is still running,
+			// otherwise concurrent doKeygen calls race on the shared keys/trace
+			// closure variables.
 			event.preventDefault();
 			void doKeygen();
 		} else if (key === 's' && !signBtn.disabled) {
@@ -1109,15 +1112,27 @@ function wireCopyButtons(root: HTMLElement): void {
 		const text = (hexNode?.textContent ?? source.textContent ?? '').trim();
 		if (!text) return;
 		const finish = (ok: boolean) => {
-			const label = button.querySelector('.copy-button__label');
-			const original = label?.textContent ?? 'Copy';
+			const label = button.querySelector('.copy-button__label') as HTMLElement | null;
+			// Capture the *true* original text on first use only, so a rapid
+			// double-click doesn't read back "Copied" and freeze the label there
+			// forever. Also cancel any pending restore from a previous click.
+			if (label && button.dataset.copyOriginal == null) {
+				button.dataset.copyOriginal = label.textContent ?? 'Copy';
+			}
+			const original = button.dataset.copyOriginal ?? 'Copy';
+			const prevTimer = button.dataset.copyTimer
+				? parseInt(button.dataset.copyTimer, 10)
+				: 0;
+			if (prevTimer) window.clearTimeout(prevTimer);
 			if (label) label.textContent = ok ? 'Copied' : 'Press Ctrl+C';
 			button.classList.toggle('is-copied', ok);
 			announce(ok ? 'Copied to clipboard.' : 'Copy failed. Press Control or Command C.');
-			window.setTimeout(() => {
+			const timer = window.setTimeout(() => {
 				if (label) label.textContent = original;
 				button.classList.remove('is-copied');
+				delete button.dataset.copyTimer;
 			}, 1600);
+			button.dataset.copyTimer = String(timer);
 		};
 		if (navigator.clipboard && window.isSecureContext) {
 			navigator.clipboard.writeText(text).then(
@@ -1491,12 +1506,18 @@ function startTour(): void {
 		timer = window.setTimeout(runStep, step.duration);
 	}
 
+	// All listeners attached during this tour run live on this AbortController
+	// so endTour() can drop them in one shot — without this, listeners stack on
+	// the (singleton) Next/Exit buttons every time the tour is replayed.
+	const ac = new AbortController();
+
 	function endTour(): void {
 		clearSpotlight();
 		overlay.hidden = true;
 		document.documentElement.classList.remove('is-tour-running');
 		currentTour = null;
 		if (timer !== undefined) window.clearTimeout(timer);
+		ac.abort();
 	}
 
 	function next(): void {
@@ -1506,20 +1527,26 @@ function startTour(): void {
 
 	const nextBtn = overlay.querySelector('[data-tour="next"]') as HTMLButtonElement | null;
 	const exitBtn = overlay.querySelector('[data-tour="exit"]') as HTMLButtonElement | null;
-	nextBtn?.addEventListener('click', next);
-	exitBtn?.addEventListener('click', () => {
-		aborted = true;
-		endTour();
-	});
-
-	const escHandler = (e: KeyboardEvent) => {
-		if (e.key === 'Escape') {
+	nextBtn?.addEventListener('click', next, { signal: ac.signal });
+	exitBtn?.addEventListener(
+		'click',
+		() => {
 			aborted = true;
 			endTour();
-			document.removeEventListener('keydown', escHandler);
-		}
-	};
-	document.addEventListener('keydown', escHandler);
+		},
+		{ signal: ac.signal },
+	);
+
+	document.addEventListener(
+		'keydown',
+		(e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				aborted = true;
+				endTour();
+			}
+		},
+		{ signal: ac.signal },
+	);
 
 	currentTour = {
 		stop: () => {
