@@ -746,7 +746,15 @@ function renderPlayground(): HTMLElement {
 		});
 	}
 
+	let keygenInFlight = false;
+
 	async function doKeygen(): Promise<void> {
+		// Guard against re-entry from rapid preset clicks / Reset / parameter
+		// changes — the button.disabled check stops the keyboard shortcut, but
+		// the chips call this function directly. Concurrent runs would race on
+		// the shared keys / trace / target closure variables.
+		if (keygenInFlight) return;
+		keygenInFlight = true;
 		const v = parseInt(vsel.value, 10);
 		const o = parseInt(osel.value, 10);
 		keygenBtn.classList.add('is-busy');
@@ -792,6 +800,7 @@ function renderPlayground(): HTMLElement {
 		} finally {
 			keygenBtn.classList.remove('is-busy');
 			keygenBtn.disabled = false;
+			keygenInFlight = false;
 		}
 	}
 
@@ -829,8 +838,12 @@ function renderPlayground(): HTMLElement {
 			lastSignMs: dt,
 		});
 		// First sign of the session triggers the collapse animation so the
-		// "quadratic -> linear" claim feels visible, not asserted.
-		if (!firstSignSeen) {
+		// "quadratic -> linear" claim feels visible, not asserted. Skip while
+		// the guided tour is running — the tour has its own narration and both
+		// would race on the SR live region.
+		const tourRunning =
+			document.documentElement.classList.contains('is-tour-running');
+		if (!firstSignSeen && !tourRunning) {
 			firstSignSeen = true;
 			window.setTimeout(() => void runCollapseAnimation(), 350);
 		}
@@ -951,6 +964,7 @@ function renderPlayground(): HTMLElement {
 		msg.value = DEFAULT_MSG;
 		vsel.value = '6';
 		osel.value = '3';
+		firstSignSeen = false; // reset so the collapse plays again on next sign
 		void doKeygen();
 		announce('Playground reset.');
 	});
@@ -1762,13 +1776,18 @@ function startTour(): void {
 	document.addEventListener(
 		'keydown',
 		(e: KeyboardEvent) => {
+			const t = e.target as HTMLElement;
+			const inField =
+				t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 			if (e.key === 'Escape') {
 				aborted = true;
 				endTour(false);
-			} else if (e.key === 'ArrowRight') {
+			} else if (e.key === 'ArrowRight' && !inField) {
+				// Don't hijack cursor movement while the viewer is editing text;
+				// only steer the tour when focus is outside form fields.
 				e.preventDefault();
 				next();
-			} else if (e.key === 'ArrowLeft') {
+			} else if (e.key === 'ArrowLeft' && !inField) {
 				e.preventDefault();
 				back();
 			}
@@ -2028,7 +2047,13 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 	ctx.closePath();
 }
 
+let currentModalCleanup: (() => void) | null = null;
+
 function openResultCard(data: ResultCardData): void {
+	// Tear down any prior modal AND its keydown listener — without this,
+	// re-opening the card stacks orphaned listeners on document that reference
+	// detached modal DOM nodes.
+	currentModalCleanup?.();
 	const existing = document.getElementById('result-modal');
 	existing?.remove();
 
@@ -2062,16 +2087,18 @@ function openResultCard(data: ResultCardData): void {
 	document.body.appendChild(modal);
 	document.documentElement.classList.add('is-modal-open');
 
+	const ac = new AbortController();
 	const closeBtns = modal.querySelectorAll('[data-close]');
 	const close = () => {
 		modal.remove();
 		document.documentElement.classList.remove('is-modal-open');
-		document.removeEventListener('keydown', onKey);
+		ac.abort();
+		currentModalCleanup = null;
 	};
+	currentModalCleanup = close;
 	const onKey = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') close();
 		if (e.key === 'Tab') {
-			// minimal focus trap: cycle inside the modal
 			const focusables = modal.querySelectorAll<HTMLElement>(
 				'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
 			);
@@ -2087,8 +2114,8 @@ function openResultCard(data: ResultCardData): void {
 			}
 		}
 	};
-	closeBtns.forEach((b) => b.addEventListener('click', close));
-	document.addEventListener('keydown', onKey);
+	closeBtns.forEach((b) => b.addEventListener('click', close, { signal: ac.signal }));
+	document.addEventListener('keydown', onKey, { signal: ac.signal });
 
 	// render preview canvas live
 	const preview = modal.querySelector('.result-modal__preview') as HTMLCanvasElement;
