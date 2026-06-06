@@ -1,6 +1,14 @@
 // ui.ts — Multivariate cryptography lab UI.
 import { keygen, sign, verify, hashMessage, evalMap, type UovKeys, type SignTrace, type Quad } from './uov.ts';
-import { SCHEMES, BEULLENS_STORY, SIG_COMPARE, PRESETS, type MvScheme, type Preset } from './data.ts';
+import {
+	SCHEMES,
+	BEULLENS_STORY,
+	SIG_COMPARE,
+	PRESETS,
+	CITATIONS,
+	type MvScheme,
+	type Preset,
+} from './data.ts';
 
 function el<K extends keyof HTMLElementTagNameMap>(
 	tag: K,
@@ -271,6 +279,10 @@ function renderHero(): HTMLElement {
           <span aria-hidden="true">📖</span>
           <span class="text-mode-toggle__label">Plain English</span>
         </button>
+        <button id="audience-toggle" class="ghost-button ghost-button--small audience-toggle" type="button" aria-pressed="false" aria-label="Toggle audience mode for presentations" title="Audience mode (A) — larger type for presentations">
+          <span aria-hidden="true">🎤</span>
+          <span class="audience-toggle__label">Audience</span>
+        </button>
         <button id="share-btn" class="icon-button" type="button" aria-label="Copy shareable demo URL" title="Copy shareable URL">
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11Z"/></svg>
         </button>
@@ -334,14 +346,17 @@ function renderHero(): HTMLElement {
       <div class="shortcuts-panel__inner">
         <h2 class="shortcuts-panel__title">Keyboard shortcuts</h2>
         <ul>
+          <li><kbd>D</kbd> Run guided 60-second demo</li>
           <li><kbd>G</kbd> Generate new keypair</li>
           <li><kbd>S</kbd> Sign current message</li>
           <li><kbd>V</kbd> Verify as-is</li>
           <li><kbd>B</kbd> Run benchmark (200 signatures)</li>
           <li><kbd>T</kbd> Toggle theme</li>
           <li><kbd>P</kbd> Toggle plain-English mode</li>
+          <li><kbd>A</kbd> Toggle audience mode</li>
+          <li><kbd>←</kbd> <kbd>→</kbd> Back / Next during the demo</li>
           <li><kbd>?</kbd> Show / hide this panel</li>
-          <li><kbd>Esc</kbd> Close this panel</li>
+          <li><kbd>Esc</kbd> Close this panel or exit the demo</li>
         </ul>
         <button type="button" class="ghost-button ghost-button--small" data-close-shortcuts>Close</button>
       </div>
@@ -1034,6 +1049,38 @@ function renderCompare(): HTMLElement {
 	return section;
 }
 
+function renderCitations(): HTMLElement {
+	const section = el('section', 'lab-section citations-section');
+	section.id = 'sources';
+	section.setAttribute('aria-labelledby', 'sources-heading');
+	const items = CITATIONS.map(
+		(c) => `
+		<li class="citation-card">
+			<a class="citation-card__link" href="${c.href}" rel="noopener noreferrer" target="_blank">
+				<span class="citation-card__label">${c.label}</span>
+				<span class="citation-card__title">${c.title}</span>
+				<span class="citation-card__venue">${c.venue}</span>
+				<span class="citation-card__note">${c.note}</span>
+				<span class="citation-card__cta" aria-hidden="true">Read ↗</span>
+			</a>
+		</li>`,
+	).join('');
+	section.innerHTML = `
+		<div class="section-heading-row">
+			<div>
+				<p class="section-kicker">Receipts</p>
+				<h2 id="sources-heading">Sources</h2>
+				<p class="section-footnote">${dual(
+					`Primary papers and standardisation pages behind the claims on this page.`,
+					`The original research and standards documents this demo is built on.`,
+				)}</p>
+			</div>
+		</div>
+		<ul class="citation-list" role="list">${items}</ul>
+	`;
+	return section;
+}
+
 function renderSchemes(): HTMLElement {
 	const section = el('section', 'lab-section');
 	section.id = 'schemes';
@@ -1307,6 +1354,47 @@ function wireTextModeToggle(): void {
 	});
 }
 
+const AUDIENCE_MODE_KEY = 'mv-audience-mode-v1';
+function applyAudienceMode(on: boolean): void {
+	document.documentElement.setAttribute('data-audience', on ? 'on' : 'off');
+	const btn = document.getElementById('audience-toggle');
+	if (btn) {
+		btn.setAttribute('aria-pressed', String(on));
+		const label = btn.querySelector('.audience-toggle__label');
+		if (label) label.textContent = on ? 'Exit audience' : 'Audience';
+	}
+	try {
+		localStorage.setItem(AUDIENCE_MODE_KEY, on ? 'on' : 'off');
+	} catch {
+		/* ignore */
+	}
+}
+
+function wireAudienceMode(): void {
+	let saved: string | null = null;
+	try {
+		saved = localStorage.getItem(AUDIENCE_MODE_KEY);
+	} catch {
+		/* ignore */
+	}
+	applyAudienceMode(saved === 'on');
+	const btn = document.getElementById('audience-toggle');
+	btn?.addEventListener('click', () => {
+		const on = document.documentElement.getAttribute('data-audience') === 'on';
+		applyAudienceMode(!on);
+		announce(!on ? 'Audience mode on — larger type for presentations.' : 'Audience mode off.');
+	});
+	document.addEventListener('keydown', (event) => {
+		const t = event.target as HTMLElement;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+		if (event.altKey || event.ctrlKey || event.metaKey) return;
+		if (event.key.toLowerCase() === 'a') {
+			event.preventDefault();
+			(btn as HTMLButtonElement | null)?.click();
+		}
+	});
+}
+
 let firstVisitSeen = false;
 function markFirstVisitSeen(): void {
 	if (firstVisitSeen) return;
@@ -1345,6 +1433,7 @@ function wireFirstVisitHint(): void {
 // --- Guided demo tour -----------------------------------------------------
 interface TourStep {
 	caption: string;
+	captionPlain?: string;
 	action?: () => void | Promise<void>;
 	spotlight?: string;
 	scrollTo?: string;
@@ -1354,70 +1443,84 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
 	{
 		caption: "Welcome. We'll generate a keypair, sign a message, try to forge it, then look at why the math works.",
+		captionPlain: "Hi. We'll make a key, sign a message, try to break it, and peek at the secret shortcut.",
 		duration: 2800,
 		scrollTo: '#playground-heading',
 	},
 	{
 		caption: 'Generating a fresh keypair — random over GF(256).',
+		captionPlain: 'Making a fresh key — fully random.',
 		action: () => (document.getElementById('keygen-btn') as HTMLButtonElement | null)?.click(),
 		spotlight: '#keygen-btn',
 		duration: 2200,
 	},
 	{
 		caption: "This 12-byte fingerprint is the verifier's anchor — a stand-in for the full public key.",
+		captionPlain: "Twelve coloured bytes stand in for the (otherwise huge) public key.",
 		spotlight: '#pk-fingerprint',
 		duration: 2800,
 	},
 	{
 		caption: 'Now we sign. Watch the byte rows fill in — vinegar, oil, then the signature.',
+		captionPlain: 'Signing now. Watch the rows of coloured bytes fill in.',
 		action: () => (document.getElementById('sign-btn') as HTMLButtonElement | null)?.click(),
 		spotlight: '#step-3-heading',
 		duration: 2400,
 	},
 	{
 		caption: 'Random vinegar bytes — these are guessed. They turn the central polynomials linear in oil.',
+		captionPlain: "Random vinegar bytes — guessed. This is what makes the rest easy.",
 		spotlight: '#trace-vinegar',
 		duration: 2600,
 	},
 	{
 		caption: 'Solved oil — what Gaussian elimination spat out once the system collapsed.',
+		captionPlain: 'Solved oil bytes — popped out of ordinary algebra in milliseconds.',
 		spotlight: '#trace-oil',
 		duration: 2600,
 	},
 	{
 		caption: "And the signature itself — the bytes the verifier actually checks.",
+		captionPlain: 'And the finished signature.',
 		spotlight: '#trace-signature',
 		duration: 2400,
 	},
 	{
 		caption: 'Standard verification: P(signature) = target. Valid.',
+		captionPlain: 'Verifying as-is — valid.',
 		action: () => (document.getElementById('verify-ok') as HTMLButtonElement | null)?.click(),
 		spotlight: '[data-scenario="ok"]',
 		duration: 2400,
 	},
 	{
 		caption: "Flip one byte and it's rejected — the signature is brittle on purpose.",
+		captionPlain: 'Change a single byte in the signature — instantly rejected.',
 		action: () => (document.getElementById('verify-bad') as HTMLButtonElement | null)?.click(),
 		spotlight: '[data-scenario="bad"]',
 		duration: 2400,
 	},
 	{
 		caption: 'Edit the message — also rejected. The signature is bound to the exact bytes.',
+		captionPlain: 'Edit the message — also rejected. The signature only fits the original.',
 		action: () => (document.getElementById('verify-msg') as HTMLButtonElement | null)?.click(),
 		spotlight: '[data-scenario="msg"]',
 		duration: 2400,
 	},
 	{
 		caption: 'And here is why it all works: in the central map, the oil × oil region is forced to zero. That zero block IS the trapdoor.',
+		captionPlain: 'Why it works: look — the red region of the math is always zero. That blank spot is the secret shortcut.',
 		spotlight: '#step-5-heading',
 		scrollTo: '#step-5-heading',
 		duration: 3400,
 	},
 	{
 		caption: 'Short signatures · massive public keys · fragile structure. That is the multivariate story — and why Rainbow lost in 2022.',
+		captionPlain: 'Tiny signatures, giant keys, fragile math. That is the multivariate tradeoff — and why Rainbow lost in 2022.',
 		duration: 4000,
 	},
 ];
+
+const TOUR_DONE_KEY = 'mv-tour-done-v1';
 
 interface TourController {
 	stop: () => void;
@@ -1435,11 +1538,24 @@ function renderTourOverlay(): HTMLElement {
 		</div>
 		<p class="tour-caption__text" id="tour-text">…</p>
 		<div class="tour-caption__actions">
-			<button type="button" class="ghost-button ghost-button--small" data-tour="next">Next</button>
+			<button type="button" class="ghost-button ghost-button--small" data-tour="back" aria-label="Previous step">‹ Back</button>
+			<button type="button" class="ghost-button ghost-button--small" data-tour="next">Next ›</button>
 			<button type="button" class="ghost-button ghost-button--small" data-tour="exit">Exit</button>
 		</div>
 	`;
 	return overlay;
+}
+
+function renderReplayHint(): HTMLElement {
+	const hint = el('div', 'replay-hint');
+	hint.setAttribute('role', 'status');
+	hint.hidden = true;
+	hint.innerHTML = `
+		<span>That's the demo. Want to replay it?</span>
+		<button type="button" class="ghost-button ghost-button--small" data-replay>Replay</button>
+		<button type="button" class="icon-button icon-button--tiny" data-replay-close aria-label="Dismiss replay hint">✕</button>
+	`;
+	return hint;
 }
 
 let currentTour: TourController | null = null;
@@ -1483,14 +1599,20 @@ function startTour(): void {
 		if (aborted) return;
 		idx++;
 		if (idx >= TOUR_STEPS.length) {
-			endTour();
+			endTour(true);
 			return;
 		}
 		const step = TOUR_STEPS[idx];
 		setProgress(idx);
 		const text = document.getElementById('tour-text');
-		if (text) text.textContent = step.caption;
-		announce(step.caption);
+		const mode = document.documentElement.getAttribute('data-text-mode');
+		const caption =
+			mode === 'plain' && step.captionPlain ? step.captionPlain : step.caption;
+		if (text) text.textContent = caption;
+		announce(caption);
+		// disable Back at the start, Next is always available
+		const backBtn = overlay.querySelector('[data-tour="back"]') as HTMLButtonElement | null;
+		if (backBtn) backBtn.disabled = idx === 0;
 		if (step.scrollTo) {
 			const target = document.querySelector(step.scrollTo);
 			target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1503,7 +1625,7 @@ function startTour(): void {
 			}
 		}
 		setSpotlight(step.spotlight);
-		timer = window.setTimeout(runStep, step.duration);
+		timer = window.setTimeout(() => void runStep(), step.duration);
 	}
 
 	// All listeners attached during this tour run live on this AbortController
@@ -1511,28 +1633,43 @@ function startTour(): void {
 	// the (singleton) Next/Exit buttons every time the tour is replayed.
 	const ac = new AbortController();
 
-	function endTour(): void {
+	function endTour(completed = false): void {
 		clearSpotlight();
 		overlay.hidden = true;
 		document.documentElement.classList.remove('is-tour-running');
 		currentTour = null;
 		if (timer !== undefined) window.clearTimeout(timer);
 		ac.abort();
+		if (completed) {
+			try {
+				localStorage.setItem(TOUR_DONE_KEY, '1');
+			} catch {
+				/* ignore */
+			}
+			showReplayHint();
+		}
 	}
 
 	function next(): void {
 		if (timer !== undefined) window.clearTimeout(timer);
 		void runStep();
 	}
+	function back(): void {
+		if (timer !== undefined) window.clearTimeout(timer);
+		idx = Math.max(idx - 2, -1);
+		void runStep();
+	}
 
 	const nextBtn = overlay.querySelector('[data-tour="next"]') as HTMLButtonElement | null;
+	const backBtn = overlay.querySelector('[data-tour="back"]') as HTMLButtonElement | null;
 	const exitBtn = overlay.querySelector('[data-tour="exit"]') as HTMLButtonElement | null;
 	nextBtn?.addEventListener('click', next, { signal: ac.signal });
+	backBtn?.addEventListener('click', back, { signal: ac.signal });
 	exitBtn?.addEventListener(
 		'click',
 		() => {
 			aborted = true;
-			endTour();
+			endTour(false);
 		},
 		{ signal: ac.signal },
 	);
@@ -1542,7 +1679,13 @@ function startTour(): void {
 		(e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
 				aborted = true;
-				endTour();
+				endTour(false);
+			} else if (e.key === 'ArrowRight') {
+				e.preventDefault();
+				next();
+			} else if (e.key === 'ArrowLeft') {
+				e.preventDefault();
+				back();
 			}
 		},
 		{ signal: ac.signal },
@@ -1551,10 +1694,45 @@ function startTour(): void {
 	currentTour = {
 		stop: () => {
 			aborted = true;
-			endTour();
+			endTour(false);
 		},
 	};
 	void runStep();
+}
+
+function showReplayHint(): void {
+	const hint = document.querySelector('.replay-hint') as HTMLElement | null;
+	if (!hint) return;
+	hint.hidden = false;
+	const close = () => {
+		hint.hidden = true;
+	};
+	const replayBtn = hint.querySelector('[data-replay]') as HTMLButtonElement | null;
+	const closeBtn = hint.querySelector('[data-replay-close]') as HTMLButtonElement | null;
+	const ac = new AbortController();
+	replayBtn?.addEventListener(
+		'click',
+		() => {
+			close();
+			ac.abort();
+			startTour();
+		},
+		{ signal: ac.signal },
+	);
+	closeBtn?.addEventListener(
+		'click',
+		() => {
+			close();
+			ac.abort();
+		},
+		{ signal: ac.signal },
+	);
+	window.setTimeout(() => {
+		if (!hint.hidden) {
+			close();
+			ac.abort();
+		}
+	}, 12000);
 }
 
 // --- Result card ----------------------------------------------------------
@@ -1838,14 +2016,16 @@ export function mountApp(root: HTMLDivElement): void {
 	const nav = renderSectionNav();
 	const playground = renderPlayground();
 	const attack = renderAttack();
+	const citations = renderCitations();
 	const schemes = renderSchemes();
 	const compare = renderCompare();
 	const footer = renderFooter();
-	main.append(hero, nav, playground, attack, schemes, compare, footer);
+	main.append(hero, nav, playground, attack, citations, schemes, compare, footer);
 	root.appendChild(main);
 	const backToTop = renderBackToTop();
 	document.body.appendChild(backToTop);
 	document.body.appendChild(renderTourOverlay());
+	document.body.appendChild(renderReplayHint());
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
 	wireShareButton();
@@ -1853,6 +2033,7 @@ export function mountApp(root: HTMLDivElement): void {
 	wireScrollReveal(main);
 	wireBackToTop(backToTop);
 	wireTextModeToggle();
+	wireAudienceMode();
 	wireFirstVisitHint();
 	wireTour(main);
 	void evalMap;

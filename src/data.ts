@@ -151,6 +151,61 @@ export interface Preset {
 	caption: string;
 }
 
+// Primary sources for the claims made elsewhere on the page. Kept short on
+// purpose — each entry is one paper or one standardisation page.
+export interface Citation {
+	label: string;
+	title: string;
+	venue: string;
+	href: string;
+	note: string;
+}
+
+export const CITATIONS: Citation[] = [
+	{
+		label: 'Patarin 1997',
+		title: 'The Oil and Vinegar Signature Scheme',
+		venue: 'Dagstuhl Workshop on Cryptography',
+		href: 'https://www.cs.ru.nl/~mlarangeira/seminars2016/Patarin_OV_Workshop.pdf',
+		note: 'The original balanced Oil-and-Vinegar proposal.',
+	},
+	{
+		label: 'Kipnis–Shamir 1998',
+		title: 'Cryptanalysis of the Oil and Vinegar Signature Scheme',
+		venue: 'CRYPTO 1998',
+		href: 'https://link.springer.com/chapter/10.1007/BFb0055733',
+		note: 'Broke the balanced scheme within a year — motivated v > o.',
+	},
+	{
+		label: 'Kipnis–Patarin–Goubin 1999',
+		title: 'Unbalanced Oil and Vinegar Signature Schemes',
+		venue: 'EUROCRYPT 1999',
+		href: 'https://www.iacr.org/archive/eurocrypt99/15920211/15920211.pdf',
+		note: 'Introduced UOV — the scheme this lab implements.',
+	},
+	{
+		label: 'Beullens 2022',
+		title: 'Breaking Rainbow Takes a Weekend on a Laptop',
+		venue: 'CRYPTO 2022',
+		href: 'https://eprint.iacr.org/2022/214',
+		note: 'Recovered Rainbow keys on a laptop — knocked it out of NIST Round 3.',
+	},
+	{
+		label: 'NIST PQC',
+		title: 'Post-Quantum Cryptography Standardization',
+		venue: 'NIST CSRC',
+		href: 'https://csrc.nist.gov/projects/post-quantum-cryptography',
+		note: 'Selected lattice + hash signatures instead of Rainbow.',
+	},
+	{
+		label: 'MAYO 2021',
+		title: 'MAYO: Practical Post-Quantum Signatures from Oil-and-Vinegar',
+		venue: 'NIST additional-signatures on-ramp',
+		href: 'https://pqmayo.org/',
+		note: 'Modern UOV variant currently under review.',
+	},
+];
+
 export const PRESETS: Preset[] = [
 	{
 		id: 'default',
