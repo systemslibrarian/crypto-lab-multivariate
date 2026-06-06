@@ -1,5 +1,5 @@
 // ui.ts — Multivariate cryptography lab UI.
-import { keygen, sign, verify, hashMessage, evalMap, type UovKeys, type SignTrace } from './uov.ts';
+import { keygen, sign, verify, hashMessage, evalMap, type UovKeys, type SignTrace, type Quad } from './uov.ts';
 import { SCHEMES, BEULLENS_STORY, SIG_COMPARE, type MvScheme } from './data.ts';
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -16,11 +16,13 @@ function el<K extends keyof HTMLElementTagNameMap>(
 const hex = (b: number) => b.toString(16).padStart(2, '0').toUpperCase();
 const hexArr = (a: number[]) => a.map(hex).join(' ');
 
-// HSL-based color mapping: each byte gets a deterministic hue. Keeps decorative
-// only (also encoded as text for screen readers), so colorblind viewers don't
-// lose information.
+const DEFAULT_MSG = 'For the glory of God — 1 Cor 10:31';
+
+// HSL-based color mapping: each byte gets a deterministic hue. Decorative —
+// the same bytes are also rendered as text and as accessible labels, so
+// colorblind viewers don't lose information.
 function byteColor(b: number): string {
-	const hue = (b * 137) % 360; // golden-angle distribution
+	const hue = (b * 137) % 360;
 	return `hsl(${hue}, 62%, 58%)`;
 }
 
@@ -31,7 +33,7 @@ function byteGrid(
 	const cells = bytes
 		.map((b, i) => {
 			const isTamper = options.tamperedIndex === i;
-			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}" aria-label="Byte ${i + 1}: ${hex(b)}${isTamper ? ', tampered' : ''}">
+			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}; --idx: ${i}" aria-label="Byte ${i + 1}: ${hex(b)}${isTamper ? ', tampered' : ''}">
 				<span class="byte-cell__hex" aria-hidden="true">${hex(b)}</span>
 			</span>`;
 		})
@@ -78,6 +80,64 @@ function fmtMs(ms: number): string {
 	return `${(ms / 1000).toFixed(2)} s`;
 }
 
+// FNV-1a over all upper-triangular bytes of the public map; expanded to
+// 12 sample bytes so the fingerprint is visually substantial without leaking
+// raw key data.
+function pubKeyFingerprint(P: Quad[], n: number): number[] {
+	let h = 0x811c9dc5;
+	for (const Q of P) {
+		for (let i = 0; i < n; i++) {
+			for (let j = i; j < n; j++) {
+				h ^= Q[i][j];
+				h = Math.imul(h, 0x01000193) >>> 0;
+			}
+		}
+	}
+	const out: number[] = [];
+	for (let k = 0; k < 12; k++) {
+		h ^= (k + 1) * 0x9e3779b1;
+		h = Math.imul(h, 0x01000193) >>> 0;
+		out.push(h & 0xff);
+	}
+	return out;
+}
+
+// --- URL state -------------------------------------------------------------
+interface DemoState {
+	v: number;
+	o: number;
+	m: string;
+}
+function readUrlState(): Partial<DemoState> {
+	try {
+		const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+		const v = parseInt(params.get('v') || '', 10);
+		const o = parseInt(params.get('o') || '', 10);
+		const m = params.get('m');
+		const out: Partial<DemoState> = {};
+		if ([4, 6, 8].includes(v)) out.v = v;
+		if ([3, 4].includes(o)) out.o = o;
+		if (m !== null) out.m = m;
+		return out;
+	} catch {
+		return {};
+	}
+}
+function writeUrlState(state: DemoState): void {
+	try {
+		const params = new URLSearchParams();
+		params.set('v', String(state.v));
+		params.set('o', String(state.o));
+		params.set('m', state.m);
+		const hash = '#' + params.toString();
+		if (location.hash !== hash) {
+			history.replaceState(null, '', hash);
+		}
+	} catch {
+		/* ignore quota / hash limits */
+	}
+}
+
 function trapdoorSvg(): string {
 	return `<svg class="trapdoor-svg" viewBox="0 0 320 220" aria-hidden="true" focusable="false">
 		<defs>
@@ -110,6 +170,9 @@ function renderHero(): HTMLElement {
         <span aria-hidden="true">⚙</span> crypto-lab · portfolio
       </a>
       <div class="hero-toolbar__right">
+        <button id="share-btn" class="icon-button" type="button" aria-label="Copy shareable demo URL" title="Copy shareable URL">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11Z"/></svg>
+        </button>
         <button id="shortcuts-btn" class="icon-button" type="button" aria-label="Keyboard shortcuts" aria-expanded="false" aria-controls="shortcuts-panel" title="Keyboard shortcuts">
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 12H4V7h16v10ZM6 9h2v2H6V9Zm0 4h2v2H6v-2Zm4-4h2v2h-2V9Zm0 4h2v2h-2v-2Zm4-4h2v2h-2V9Zm0 4h6v2h-6v-2Zm4-4h2v2h-2V9Z"/></svg>
         </button>
@@ -151,7 +214,7 @@ function renderHero(): HTMLElement {
       ${trapdoorSvg()}
       <p class="hero-metric-note">NP-hard in general · easy if you know which variables are oil</p>
     </aside>
-    <div id="shortcuts-panel" class="shortcuts-panel" role="dialog" aria-label="Keyboard shortcuts" hidden>
+    <div id="shortcuts-panel" class="shortcuts-panel" aria-label="Keyboard shortcuts" hidden>
       <div class="shortcuts-panel__inner">
         <h2 class="shortcuts-panel__title">Keyboard shortcuts</h2>
         <ul>
@@ -160,12 +223,28 @@ function renderHero(): HTMLElement {
           <li><kbd>V</kbd> Verify as-is</li>
           <li><kbd>T</kbd> Toggle theme</li>
           <li><kbd>?</kbd> Show / hide this panel</li>
+          <li><kbd>Esc</kbd> Close this panel</li>
         </ul>
         <button type="button" class="ghost-button ghost-button--small" data-close-shortcuts>Close</button>
       </div>
     </div>
   `;
 	return hero;
+}
+
+// --- Section navigation ----------------------------------------------------
+function renderSectionNav(): HTMLElement {
+	const nav = el('nav', 'section-nav');
+	nav.setAttribute('aria-label', 'Section navigation');
+	nav.innerHTML = `
+		<div class="section-nav__inner">
+			<a href="#playground-heading" data-section="playground"><span aria-hidden="true">▶</span> Live demo</a>
+			<a href="#attack-heading" data-section="attack"><span aria-hidden="true">⚡</span> The break</a>
+			<a href="#schemes-heading" data-section="schemes"><span aria-hidden="true">▤</span> Lineage</a>
+			<a href="#compare-heading" data-section="compare"><span aria-hidden="true">▥</span> Compare</a>
+		</div>
+	`;
+	return nav;
 }
 
 // --- Live UOV playground ---------------------------------------------------
@@ -183,7 +262,7 @@ function renderPlayground(): HTMLElement {
           and verification all run client-side. Teaching parameters — not production-secure.
         </p>
       </div>
-      <div class="timing-strip" aria-label="Latest operation timings">
+      <div class="timing-strip" role="group" aria-label="Latest operation timings">
         <div class="timing-pill" data-timing="keygen"><span class="timing-pill__label">Keygen</span><span class="timing-pill__value" id="t-keygen">—</span></div>
         <div class="timing-pill" data-timing="sign"><span class="timing-pill__label">Sign</span><span class="timing-pill__value" id="t-sign">—</span></div>
         <div class="timing-pill" data-timing="verify"><span class="timing-pill__label">Verify</span><span class="timing-pill__value" id="t-verify">—</span></div>
@@ -194,12 +273,12 @@ function renderPlayground(): HTMLElement {
       <div class="panel-card panel-card--wide" aria-labelledby="step-1-heading">
         <div class="panel-header">
           <h3 id="step-1-heading"><span class="step-num" aria-hidden="true">1</span> Message &amp; parameters</h3>
-          <button id="reset-btn" class="ghost-button ghost-button--small" type="button" title="Reset playground">
+          <button id="reset-btn" class="ghost-button ghost-button--small" type="button" title="Reset playground to defaults">
             <span aria-hidden="true">↺</span> Reset
           </button>
         </div>
         <label for="msg" class="field-label">Message to sign</label>
-        <textarea id="msg" class="message-input" rows="2" aria-describedby="msg-help" autocomplete="off" spellcheck="false">For the glory of God — 1 Cor 10:31</textarea>
+        <textarea id="msg" class="message-input" rows="2" aria-describedby="msg-help" autocomplete="off" spellcheck="false">${DEFAULT_MSG}</textarea>
         <p id="msg-help" class="field-help">Change the message and watch the target hash change with it.</p>
 
         <div class="param-row" role="group" aria-label="UOV parameters">
@@ -212,11 +291,19 @@ function renderPlayground(): HTMLElement {
             <select id="osel" aria-describedby="param-help"><option selected>3</option><option>4</option></select>
           </label>
           <button id="keygen-btn" class="ghost-button" type="button" aria-keyshortcuts="g">
-            <span aria-hidden="true">↻</span> Generate <kbd class="kbd-hint" aria-hidden="true">G</kbd>
+            <span class="ghost-button__spinner" aria-hidden="true"></span>
+            <span aria-hidden="true" class="ghost-button__icon">↻</span>
+            <span>Generate</span> <kbd class="kbd-hint" aria-hidden="true">G</kbd>
           </button>
         </div>
         <p id="param-help" class="field-help">v &gt; o gives the &ldquo;unbalanced&rdquo; structure that resists the 1998 Kipnis–Shamir attack.</p>
         <p id="key-status" class="panel-copy" role="status" aria-live="polite">No keypair yet — generate one to begin.</p>
+
+        <div class="fingerprint-row">
+          <span class="fingerprint-row__label">Public key fingerprint</span>
+          <div id="pk-fingerprint" class="fingerprint-grid"></div>
+          <p class="field-help fingerprint-row__hint">A 12-byte FNV hash of the public map — what the verifier holds on to.</p>
+        </div>
       </div>
 
       <div class="panel-card" aria-labelledby="step-2-heading">
@@ -236,10 +323,12 @@ function renderPlayground(): HTMLElement {
         </div>
         <p class="panel-copy">Guess vinegar → the system goes linear in oil → solve.</p>
         <button id="sign-btn" class="action-button" type="button" disabled aria-describedby="sign-help" aria-keyshortcuts="s">
-          <span aria-hidden="true">✍</span> Sign message <kbd class="kbd-hint" aria-hidden="true">S</kbd>
+          <span aria-hidden="true">✍</span> <span>Sign message</span> <kbd class="kbd-hint" aria-hidden="true">S</kbd>
         </button>
         <p id="sign-help" class="field-help">Produces a fresh signature — vinegar is randomised each time.</p>
-        <div id="trace-out" class="trace-out" aria-live="polite"></div>
+        <div id="trace-out" class="trace-out" aria-live="polite">
+          <p class="trace-empty">No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.</p>
+        </div>
       </div>
 
       <div class="panel-card panel-card--wide" aria-labelledby="step-4-heading">
@@ -294,6 +383,15 @@ function renderPlayground(): HTMLElement {
 	const badBtn = $('verify-bad') as HTMLButtonElement;
 	const msgBtn = $('verify-msg') as HTMLButtonElement;
 	const resetBtn = $('reset-btn') as HTMLButtonElement;
+	const keygenBtn = $('keygen-btn') as HTMLButtonElement;
+
+	function persistState(): void {
+		writeUrlState({
+			v: parseInt(vsel.value, 10),
+			o: parseInt(osel.value, 10),
+			m: msg.value,
+		});
+	}
 
 	function setTiming(id: string, ms: number | null): void {
 		const node = section.querySelector('#' + id) as HTMLElement | null;
@@ -313,21 +411,7 @@ function renderPlayground(): HTMLElement {
 		$('target-byte-grid').innerHTML = byteGrid(target, { label: 'Target hash' });
 	}
 
-	function doKeygen(): void {
-		const v = parseInt(vsel.value, 10);
-		const o = parseInt(osel.value, 10);
-		const t0 = performance.now();
-		keys = keygen({ v, o });
-		const dt = performance.now() - t0;
-		setTiming('t-keygen', dt);
-		setTiming('t-sign', null);
-		setTiming('t-verify', null);
-		trace = null;
-		$('key-status').innerHTML = `Keypair ready · n = ${v + o} variables · public map = ${o} quadratics in ${v + o} vars. <strong>Public key hides which variables are oil.</strong>`;
-		refreshTarget();
-		signBtn.disabled = false;
-		[okBtn, badBtn, msgBtn].forEach((b) => (b.disabled = true));
-		$('trace-out').innerHTML = '';
+	function clearVerifyState(): void {
 		(section.querySelectorAll('[data-scenario]') as NodeListOf<HTMLElement>).forEach((card) => {
 			card.classList.remove('is-valid', 'is-invalid');
 		});
@@ -336,7 +420,49 @@ function renderPlayground(): HTMLElement {
 			$(id).textContent = 'Awaiting signature';
 		});
 		$('verify-bad-detail').innerHTML = '';
-		announce(`Keypair generated with ${v} vinegar and ${o} oil variables in ${fmtMs(dt)}.`);
+	}
+
+	function renderFingerprint(): void {
+		if (!keys) {
+			$('pk-fingerprint').innerHTML = '<span class="fingerprint-grid__pending">No keypair yet</span>';
+			return;
+		}
+		const fp = pubKeyFingerprint(keys.P, keys.n);
+		$('pk-fingerprint').innerHTML = byteGrid(fp, {
+			id: 'pk-fingerprint-grid',
+			label: 'Public key fingerprint',
+		});
+	}
+
+	async function doKeygen(): Promise<void> {
+		const v = parseInt(vsel.value, 10);
+		const o = parseInt(osel.value, 10);
+		keygenBtn.classList.add('is-busy');
+		keygenBtn.disabled = true;
+		// yield so the spinner has a chance to paint before we block the main thread
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+		await new Promise<void>((resolve) => setTimeout(resolve, 0));
+		try {
+			const t0 = performance.now();
+			keys = keygen({ v, o });
+			const dt = performance.now() - t0;
+			setTiming('t-keygen', dt);
+			setTiming('t-sign', null);
+			setTiming('t-verify', null);
+			trace = null;
+			$('key-status').innerHTML = `Keypair ready · n = ${v + o} variables · public map = ${o} quadratics in ${v + o} vars. <strong>Public key hides which variables are oil.</strong>`;
+			refreshTarget();
+			renderFingerprint();
+			signBtn.disabled = false;
+			[okBtn, badBtn, msgBtn].forEach((b) => (b.disabled = true));
+			$('trace-out').innerHTML = `<p class="trace-empty">No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.</p>`;
+			clearVerifyState();
+			announce(`Keypair generated with ${v} vinegar and ${o} oil variables in ${fmtMs(dt)}.`);
+			persistState();
+		} finally {
+			keygenBtn.classList.remove('is-busy');
+			keygenBtn.disabled = false;
+		}
 	}
 
 	function doSign(): void {
@@ -384,18 +510,27 @@ function renderPlayground(): HTMLElement {
 		return result;
 	}
 
-	$('keygen-btn').addEventListener('click', doKeygen);
+	keygenBtn.addEventListener('click', () => {
+		void doKeygen();
+	});
 	signBtn.addEventListener('click', doSign);
 	resetBtn.addEventListener('click', () => {
-		msg.value = 'For the glory of God — 1 Cor 10:31';
+		msg.value = DEFAULT_MSG;
 		vsel.value = '6';
 		osel.value = '3';
-		doKeygen();
+		void doKeygen();
 		announce('Playground reset.');
 	});
 	msg.addEventListener('input', () => {
 		if (keys) refreshTarget();
+		persistState();
 	});
+	[vsel, osel].forEach((sel) =>
+		sel.addEventListener('change', () => {
+			persistState();
+			void doKeygen();
+		}),
+	);
 
 	okBtn.addEventListener('click', () => {
 		if (!keys || !trace) return;
@@ -422,22 +557,28 @@ function renderPlayground(): HTMLElement {
 		setStatus('msg', ok, ok ? 'Valid (unexpected!)' : '✗ Rejected — signature is bound to the message');
 	});
 
+	// hydrate from URL hash if present
+	const url = readUrlState();
+	if (url.v != null) vsel.value = String(url.v);
+	if (url.o != null) osel.value = String(url.o);
+	if (url.m != null) msg.value = url.m;
+
 	// auto-run once so the page is alive on load
 	queueMicrotask(() => {
-		doKeygen();
+		void doKeygen();
 	});
 
-	// keyboard shortcuts (only when no input is focused)
+	// keyboard shortcuts
 	document.addEventListener('keydown', (event) => {
-		const target = event.target as HTMLElement;
-		if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+		const t = event.target as HTMLElement;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
 			return;
 		}
 		if (event.altKey || event.ctrlKey || event.metaKey) return;
 		const key = event.key.toLowerCase();
 		if (key === 'g') {
 			event.preventDefault();
-			doKeygen();
+			void doKeygen();
 		} else if (key === 's' && !signBtn.disabled) {
 			event.preventDefault();
 			doSign();
@@ -584,8 +725,6 @@ function wireCopyButtons(root: HTMLElement): void {
 		if (!sourceId) return;
 		const source = document.getElementById(sourceId);
 		if (!source) return;
-		// prefer the data-byte-hex sr-only span if present (pure hex stream),
-		// otherwise fall back to the element's text content.
 		const hexNode = source.querySelector('[data-byte-hex]');
 		const text = (hexNode?.textContent ?? source.textContent ?? '').trim();
 		if (!text) return;
@@ -624,6 +763,33 @@ function wireCopyButtons(root: HTMLElement): void {
 	});
 }
 
+function wireShareButton(): void {
+	const btn = document.getElementById('share-btn') as HTMLButtonElement | null;
+	if (!btn) return;
+	btn.addEventListener('click', async () => {
+		const url = location.href;
+		const flash = (msg: string) => {
+			btn.classList.add('is-copied');
+			btn.setAttribute('aria-label', msg);
+			announce(msg);
+			window.setTimeout(() => {
+				btn.classList.remove('is-copied');
+				btn.setAttribute('aria-label', 'Copy shareable demo URL');
+			}, 1600);
+		};
+		try {
+			if (navigator.share) {
+				await navigator.share({ title: 'Oil & Vinegar lab', url });
+				return;
+			}
+			await navigator.clipboard.writeText(url);
+			flash('Demo URL copied to clipboard.');
+		} catch {
+			flash('Copy failed.');
+		}
+	});
+}
+
 function wireShortcutsPanel(root: HTMLElement): void {
 	const btn = root.querySelector('#shortcuts-btn') as HTMLButtonElement | null;
 	const panel = root.querySelector('#shortcuts-panel') as HTMLElement | null;
@@ -633,9 +799,7 @@ function wireShortcutsPanel(root: HTMLElement): void {
 	const open = (state: boolean) => {
 		panel.hidden = !state;
 		btn.setAttribute('aria-expanded', String(state));
-		if (state) {
-			closeBtn?.focus();
-		}
+		if (state) closeBtn?.focus();
 	};
 	btn.addEventListener('click', () => open(isHidden()));
 	closeBtn?.addEventListener('click', () => {
@@ -655,20 +819,62 @@ function wireShortcutsPanel(root: HTMLElement): void {
 	});
 }
 
+function wireSectionNavObserver(nav: HTMLElement, sections: HTMLElement[]): void {
+	const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>('a[data-section]'));
+	const byId: Record<string, HTMLAnchorElement> = {};
+	links.forEach((a) => {
+		const key = a.getAttribute('data-section') || '';
+		byId[key] = a;
+	});
+	const observer = new IntersectionObserver(
+		(entries) => {
+			entries.forEach((entry) => {
+				if (!entry.isIntersecting) return;
+				const id = (entry.target as HTMLElement).id;
+				links.forEach((a) => a.classList.remove('is-active'));
+				byId[id]?.classList.add('is-active');
+			});
+		},
+		{ rootMargin: '-35% 0px -55% 0px' },
+	);
+	sections.forEach((s) => observer.observe(s));
+}
+
+function wireScrollReveal(root: HTMLElement): void {
+	if (typeof IntersectionObserver === 'undefined') return;
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+	const items = root.querySelectorAll<HTMLElement>('.lab-section, .panel-card, .attack-step, .scheme-card');
+	const observer = new IntersectionObserver(
+		(entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) {
+					entry.target.classList.add('reveal-in');
+					observer.unobserve(entry.target);
+				}
+			});
+		},
+		{ rootMargin: '0px 0px -8% 0px' },
+	);
+	items.forEach((it) => observer.observe(it));
+}
+
 export function mountApp(root: HTMLDivElement): void {
 	const main = el('main', 'page-shell');
 	main.id = 'main-content';
 	main.setAttribute('tabindex', '-1');
-	main.append(
-		renderHero(),
-		renderPlayground(),
-		renderAttack(),
-		renderSchemes(),
-		renderCompare(),
-		renderFooter(),
-	);
+	const hero = renderHero();
+	const nav = renderSectionNav();
+	const playground = renderPlayground();
+	const attack = renderAttack();
+	const schemes = renderSchemes();
+	const compare = renderCompare();
+	const footer = renderFooter();
+	main.append(hero, nav, playground, attack, schemes, compare, footer);
 	root.appendChild(main);
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
+	wireShareButton();
+	wireSectionNavObserver(nav, [playground, attack, schemes, compare]);
+	wireScrollReveal(main);
 	void evalMap; // referenced for potential debugging hooks
 }

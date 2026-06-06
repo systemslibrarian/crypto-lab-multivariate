@@ -45,10 +45,22 @@ mountApp(document.querySelector<HTMLDivElement>('#app')!);
 	const current = document.documentElement.getAttribute('data-theme') ?? 'dark';
 	apply(current);
 
-	button.addEventListener('click', () => {
+	function toggle(): void {
 		const next =
 			document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
 		apply(next);
+	}
+
+	button.addEventListener('click', toggle);
+
+	document.addEventListener('keydown', (event) => {
+		const t = event.target as HTMLElement;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+		if (event.altKey || event.ctrlKey || event.metaKey) return;
+		if (event.key.toLowerCase() === 't') {
+			event.preventDefault();
+			toggle();
+		}
 	});
 
 	// follow OS-level changes only when the user hasn't picked a theme yet
