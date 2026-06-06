@@ -20,20 +20,48 @@ console.groupEnd();
 
 mountApp(document.querySelector<HTMLDivElement>('#app')!);
 
-(function initThemeToggle() {
+(function initThemeToggle(): void {
 	const button = document.getElementById('theme-toggle') as HTMLButtonElement | null;
 	if (!button) return;
+	const icon = button.querySelector('.theme-toggle__icon') as HTMLElement | null;
+
 	function apply(theme: string): void {
 		document.documentElement.setAttribute('data-theme', theme);
-		localStorage.setItem('theme', theme);
+		try {
+			localStorage.setItem('theme', theme);
+		} catch {
+			/* ignore quota / private mode */
+		}
 		const isDark = theme === 'dark';
-		button!.textContent = isDark ? '\u{1F319}' : '\u2600\uFE0F';
-		button!.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+		button!.setAttribute('aria-pressed', String(isDark));
+		button!.setAttribute(
+			'aria-label',
+			isDark ? 'Switch to light mode' : 'Switch to dark mode',
+		);
+		button!.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+		if (icon) icon.textContent = isDark ? '\u{1F319}' : '☀️';
 	}
+
 	const current = document.documentElement.getAttribute('data-theme') ?? 'dark';
 	apply(current);
+
 	button.addEventListener('click', () => {
-		const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+		const next =
+			document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
 		apply(next);
 	});
+
+	// follow OS-level changes only when the user hasn't picked a theme yet
+	const media = window.matchMedia('(prefers-color-scheme: dark)');
+	const onChange = (e: MediaQueryListEvent) => {
+		try {
+			if (localStorage.getItem('theme')) return;
+		} catch {
+			/* ignore */
+		}
+		apply(e.matches ? 'dark' : 'light');
+	};
+	if (typeof media.addEventListener === 'function') {
+		media.addEventListener('change', onChange);
+	}
 })();

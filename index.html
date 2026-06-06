@@ -3,22 +3,59 @@
   <head>
     <script>
       (function () {
-        const saved = localStorage.getItem('theme');
-        document.documentElement.setAttribute('data-theme', saved ?? 'dark');
+        try {
+          var saved = localStorage.getItem('theme');
+          var prefersDark =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
       })();
     </script>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b7fab" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#12101a" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <meta
       name="description"
-      content="Interactive multivariate cryptography demo — Oil-and-Vinegar signatures, the MQ trapdoor, and why Rainbow was broken in 2022."
+      content="Interactive post-quantum multivariate cryptography lab. Sign messages with Oil-and-Vinegar (UOV) in your browser, watch the trapdoor turn a hard nonlinear problem into a linear solve, and see how Rainbow was broken in 2022."
     />
-    <title>Multivariate Crypto: Oil & Vinegar — crypto-lab</title>
+    <meta
+      name="keywords"
+      content="post-quantum cryptography, multivariate, UOV, Oil and Vinegar, Rainbow, MQ problem, GF(256), Beullens attack, cryptography demo"
+    />
+    <meta name="author" content="systemslibrarian" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Oil &amp; Vinegar — Multivariate Crypto Lab" />
+    <meta
+      property="og:description"
+      content="Sign a message with a real UOV scheme in your browser. See the MQ trapdoor and the 2022 break of Rainbow."
+    />
+    <meta property="og:image" content="/favicon.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Oil &amp; Vinegar — Multivariate Crypto Lab" />
+    <meta
+      name="twitter:description"
+      content="An interactive Unbalanced Oil-and-Vinegar signature demo in the browser."
+    />
+    <title>Oil &amp; Vinegar — Multivariate Crypto Lab</title>
   </head>
   <body>
-    <a class="skip-link" href="#playground-heading">Skip to content</a>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <a class="skip-link skip-link--second" href="#playground-heading">Skip to interactive demo</a>
     <div id="app"></div>
+    <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

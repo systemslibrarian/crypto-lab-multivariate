@@ -3,24 +3,27 @@
 
 .maturity-chip {
   display: inline-block;
-  margin-left: 8px;
-  padding: 3px 12px;
+  padding: 4px 12px;
   border-radius: 999px;
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   vertical-align: middle;
   background: var(--panel-strong);
   border: 1px solid var(--line);
+  white-space: nowrap;
 }
 .maturity-chip.scenario-status--valid {
   background: color-mix(in oklab, var(--accent-4) 18%, transparent);
   color: var(--accent-4);
+  border-color: color-mix(in oklab, var(--accent-4) 28%, transparent);
 }
 .maturity-chip.scenario-status--pending {
   background: color-mix(in oklab, var(--accent) 18%, transparent);
   color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 28%, transparent);
 }
 .maturity-chip.scenario-status--invalid {
   background: var(--warning-bg);
@@ -33,102 +36,168 @@
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  align-items: center;
-  margin-top: 14px;
+  align-items: stretch;
+  margin-top: 18px;
 }
 .param-row label {
-  color: var(--ink-soft);
-  font-size: 0.9rem;
   display: inline-flex;
+  flex-direction: column;
   gap: 6px;
-  align-items: center;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.param-row__name {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 .param-row select {
-  padding: 8px 10px;
+  padding: 10px 14px;
+  min-height: 44px;
   border-radius: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--input-bg);
   color: var(--ink-strong);
   font-family: var(--mono);
+  font-size: 0.98rem;
+  appearance: auto;
+  cursor: pointer;
+}
+.param-row #keygen-btn {
+  align-self: end;
+}
+
+@media (max-width: 480px) {
+  .param-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .param-row label {
+    width: 100%;
+  }
+  .param-row select {
+    width: 100%;
+  }
+  .param-row #keygen-btn {
+    width: 100%;
+  }
 }
 
 /* sign trace */
 .trace-out {
-  margin-top: 14px;
+  margin-top: 18px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
+}
+.trace-out:empty {
+  display: none;
 }
 .trace-step {
   display: grid;
   grid-template-columns: 130px 1fr;
-  gap: 12px;
+  gap: 14px;
   align-items: baseline;
   opacity: 0;
   transform: translateY(8px);
   animation: row-enter 380ms ease forwards;
 }
-.trace-step:nth-child(2) { animation-delay: 120ms; }
-.trace-step:nth-child(3) { animation-delay: 240ms; }
+.trace-step:nth-child(2) { animation-delay: 100ms; }
+.trace-step:nth-child(3) { animation-delay: 200ms; }
 .trace-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
   font-weight: 700;
+  padding-top: 6px;
 }
 .trace-step .mono-inline {
   margin: 0;
-  padding: 8px 12px;
+  padding: 10px 14px;
   word-break: break-all;
+  font-size: 0.85rem;
 }
 
 /* attack flow */
 .attack-flow {
+  list-style: none;
   display: grid;
-  gap: 16px;
-  margin-top: 22px;
+  gap: 14px;
+  margin: 24px 0 0;
+  padding: 0;
+  counter-reset: none;
 }
 .attack-step {
   display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 18px;
+  grid-template-columns: 52px 1fr;
+  gap: 20px;
   align-items: start;
-  padding: 18px 20px;
+  padding: 20px 22px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   background: var(--panel-strong);
+  box-shadow: var(--shadow-soft);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+.attack-step:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px -22px rgba(0,0,0,0.35);
 }
 .attack-step h3 {
   margin: 0 0 6px;
   color: var(--ink-strong);
-  font-size: 1.1rem;
+  font-size: 1.08rem;
+  letter-spacing: -0.005em;
+}
+.attack-step__body p {
+  margin-top: 6px;
 }
 .attack-num {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   font-family: var(--mono);
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--metric-fg);
   background: var(--metric-bg);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
 }
 .attack-step:last-of-type .attack-num {
   background: linear-gradient(135deg, var(--accent), var(--accent-4));
   color: #fff9f2;
+  border-color: transparent;
 }
 
 .scripture {
   margin: 18px 0 0;
   color: var(--ink-soft);
   font-style: italic;
-  line-height: 1.6;
+  line-height: 1.65;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 720px) {
-  .trace-step { grid-template-columns: 1fr; gap: 4px; }
-  .attack-step { grid-template-columns: 36px 1fr; gap: 12px; padding: 16px; }
-  .attack-num { width: 34px; height: 34px; font-size: 0.95rem; }
+  .trace-step {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .trace-label {
+    padding-top: 0;
+  }
+  .attack-step {
+    grid-template-columns: 40px 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+  .attack-num {
+    width: 38px;
+    height: 38px;
+    font-size: 0.98rem;
+  }
 }
