@@ -77,7 +77,9 @@ export interface SigCompare {
 	family: string;
 	scheme: string;
 	pubKey: string;
+	pubKeyBytes: number;
 	sig: string;
+	sigBytes: number;
 	feel: string;
 	status: 'standardized' | 'research' | 'broken';
 }
@@ -89,7 +91,9 @@ export const SIG_COMPARE: SigCompare[] = [
 		family: 'Lattice',
 		scheme: 'ML-DSA-65 (Dilithium)',
 		pubKey: '1.9 KB',
+		pubKeyBytes: 1952,
 		sig: '3.3 KB',
+		sigBytes: 3309,
 		feel: 'sig ≈ a paragraph of email',
 		status: 'standardized',
 	},
@@ -97,7 +101,9 @@ export const SIG_COMPARE: SigCompare[] = [
 		family: 'Lattice',
 		scheme: 'Falcon-512',
 		pubKey: '897 B',
+		pubKeyBytes: 897,
 		sig: '666 B',
+		sigBytes: 666,
 		feel: 'sig ≈ a tweet',
 		status: 'standardized',
 	},
@@ -105,7 +111,9 @@ export const SIG_COMPARE: SigCompare[] = [
 		family: 'Hash',
 		scheme: 'SLH-DSA-128f (SPHINCS+)',
 		pubKey: '32 B',
+		pubKeyBytes: 32,
 		sig: '17 KB',
+		sigBytes: 17088,
 		feel: 'sig ≈ a small icon',
 		status: 'standardized',
 	},
@@ -113,7 +121,9 @@ export const SIG_COMPARE: SigCompare[] = [
 		family: 'Multivariate',
 		scheme: 'Rainbow (Ia)',
 		pubKey: '158 KB',
+		pubKeyBytes: 161600,
 		sig: '66 B',
+		sigBytes: 66,
 		feel: 'pubkey ≈ a phone photo · sig fits in 2 tweets',
 		status: 'broken',
 	},
@@ -121,7 +131,9 @@ export const SIG_COMPARE: SigCompare[] = [
 		family: 'Multivariate',
 		scheme: 'UOV',
 		pubKey: '278 KB',
+		pubKeyBytes: 284600,
 		sig: '128 B',
+		sigBytes: 128,
 		feel: 'pubkey ≈ 2 phone photos · sig fits in 1 tweet',
 		status: 'research',
 	},

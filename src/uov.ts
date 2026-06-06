@@ -190,6 +190,8 @@ export interface SignTrace {
 	preimage: number[]; // (vinegar || oil) — a preimage of target under F
 	signature: number[]; // S^{-1} · preimage — a preimage under P
 	attempts: number; // vinegar guesses before a solvable system appeared
+	A: number[][]; // o×o coefficient matrix of the solved linear system
+	rhs: number[]; // length-o right-hand side of the solved linear system
 }
 
 // Sign: find x with P(x) = target by inverting the central map.
@@ -238,7 +240,16 @@ export function sign(keys: UovKeys, target: number[]): SignTrace {
 
 		const preimage = [...vinegar, ...oil];
 		const signature = matVec(keys.Sinv, preimage);
-		return { target, vinegar, oil, preimage, signature, attempts: attempt };
+		return {
+			target,
+			vinegar,
+			oil,
+			preimage,
+			signature,
+			attempts: attempt,
+			A: A.map((row) => row.slice()),
+			rhs: rhs.slice(),
+		};
 	}
 	throw new Error('signing failed: no solvable vinegar guess found');
 }

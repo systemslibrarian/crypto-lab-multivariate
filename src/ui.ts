@@ -112,6 +112,89 @@ function pubKeyFingerprint(P: Quad[], n: number): number[] {
 	return out;
 }
 
+function renderAnatomyMatrix(keys: UovKeys, k: number): string {
+	const { v, o } = keys.params;
+	const n = keys.n;
+	const Q = keys.F[k];
+	const colSize = `clamp(22px, calc((100vw - 120px) / ${n + 1}), 36px)`;
+	let html = `<div class="anatomy-matrix" role="img" aria-label="Polynomial ${k + 1} of ${o}: ${n}-by-${n} upper-triangular coefficient matrix" style="grid-template-columns: 30px repeat(${n}, ${colSize});">`;
+	// corner + column headers
+	html += '<span class="anatomy-corner" aria-hidden="true"></span>';
+	for (let j = 0; j < n; j++) {
+		const isV = j < v;
+		const label = isV ? `v${j + 1}` : `o${j - v + 1}`;
+		html += `<span class="anatomy-header anatomy-header--${isV ? 'v' : 'o'}" aria-hidden="true">${label}</span>`;
+	}
+	for (let i = 0; i < n; i++) {
+		const rowIsV = i < v;
+		html += `<span class="anatomy-rowhead anatomy-header--${rowIsV ? 'v' : 'o'}" aria-hidden="true">${rowIsV ? 'v' + (i + 1) : 'o' + (i - v + 1)}</span>`;
+		for (let j = 0; j < n; j++) {
+			if (j < i) {
+				html += '<span class="anatomy-cell anatomy-cell--blank" aria-hidden="true"></span>';
+				continue;
+			}
+			const region = i < v && j < v ? 'vv' : i < v ? 'vo' : 'oo';
+			if (region === 'oo') {
+				html += `<span class="anatomy-cell anatomy-cell--oo" title="oil×oil coefficient: forced to 0 — the trapdoor"><span class="anatomy-cell__zero">0</span></span>`;
+			} else {
+				html += `<span class="anatomy-cell anatomy-cell--${region}" title="coefficient of x${i + 1}·x${j + 1}: ${hex(Q[i][j])}">${hex(Q[i][j])}</span>`;
+			}
+		}
+	}
+	html += '</div>';
+	html += `
+		<ul class="anatomy-legend" role="list">
+			<li><span class="legend-swatch legend-swatch--vv" aria-hidden="true"></span>vinegar × vinegar — becomes a constant once vinegar is fixed</li>
+			<li><span class="legend-swatch legend-swatch--vo" aria-hidden="true"></span>vinegar × oil — becomes <em>linear</em> in oil once vinegar is fixed</li>
+			<li><span class="legend-swatch legend-swatch--oo" aria-hidden="true"></span>oil × oil — forced to <strong>0</strong>: <em>this is the trapdoor</em></li>
+		</ul>`;
+	return html;
+}
+
+function renderLinearSystem(trace: SignTrace): string {
+	const o = trace.A.length;
+	const colSize = `clamp(28px, calc((100vw - 200px) / ${o + 2}), 44px)`;
+	const aMatrix = (() => {
+		let h = `<div class="ls-matrix" style="grid-template-columns: repeat(${o}, ${colSize});" aria-label="Coefficient matrix A">`;
+		for (let i = 0; i < o; i++) {
+			for (let j = 0; j < o; j++) {
+				h += `<span class="ls-cell ls-cell--A">${hex(trace.A[i][j])}</span>`;
+			}
+		}
+		h += '</div>';
+		return h;
+	})();
+	const vector = (cls: 'oil' | 'rhs', values: number[]) => {
+		let h = `<div class="ls-vector ls-vector--${cls}" style="grid-template-columns: ${colSize};" aria-label="${cls === 'oil' ? 'Oil variables (solved)' : 'Right-hand side'}">`;
+		for (const val of values) {
+			h += `<span class="ls-cell ls-cell--${cls}">${hex(val)}</span>`;
+		}
+		h += '</div>';
+		return h;
+	};
+	return `
+		<div class="linear-system">
+			<p class="panel-copy"><strong>Here is the o×o system that fell out.</strong> Fixing the vinegar values turned the quadratic central polynomials into ordinary linear equations in just the o oil variables.</p>
+			<div class="linear-system__expr">
+				<div class="ls-group">
+					<span class="ls-label">A</span>
+					${aMatrix}
+				</div>
+				<span class="ls-op" aria-hidden="true">·</span>
+				<div class="ls-group">
+					<span class="ls-label">oil</span>
+					${vector('oil', trace.oil)}
+				</div>
+				<span class="ls-op" aria-hidden="true">=</span>
+				<div class="ls-group">
+					<span class="ls-label">rhs</span>
+					${vector('rhs', trace.rhs)}
+				</div>
+			</div>
+			<p class="section-footnote">Gaussian-elimination over GF(256) recovered the oil bytes shown in step 3. The signer never had to attack the original quadratic puzzle — the trapdoor reduced it to high-school algebra.</p>
+		</div>`;
+}
+
 interface DemoState {
 	v: number;
 	o: number;
@@ -441,6 +524,24 @@ function renderPlayground(): HTMLElement {
           </li>
         </ul>
       </div>
+
+      <div class="panel-card panel-card--full" aria-labelledby="step-5-heading">
+        <div class="panel-header">
+          <h3 id="step-5-heading"><span class="step-num" aria-hidden="true">5</span> ${dual('Anatomy of the trapdoor', 'Why the secret shortcut works')}</h3>
+          <label for="poly-select" class="poly-select-label">
+            <span class="param-row__name">Polynomial</span>
+            <select id="poly-select" aria-label="Choose which central polynomial to inspect"></select>
+          </label>
+        </div>
+        <p class="panel-copy">${dual(
+					`Each of the <em>o</em> central polynomials is quadratic in <em>v + o</em> variables — but the <strong>oil × oil</strong> coefficients are forced to <strong>0</strong>. That blank red region <em>is</em> the trapdoor. Once vinegar is locked in, every remaining term is either constant or linear in oil, so a fast linear solve finishes the job.`,
+					`The signer secretly knows: the polynomial has a <strong>missing region</strong>. Wherever both inputs are "oil", the math is forced to zero. Once you pick random vinegar values, the puzzle deflates into ordinary linear algebra — instantly solvable.`,
+				)}</p>
+        <div class="anatomy-scroller">
+          <div id="anatomy-matrix" class="anatomy-matrix-host"></div>
+        </div>
+        <div id="linear-system" class="linear-system-host" hidden></div>
+      </div>
     </div>
   `;
 
@@ -460,6 +561,42 @@ function renderPlayground(): HTMLElement {
 	const verifyAllBtn = $('verify-all-btn') as HTMLButtonElement;
 	const resetBtn = $('reset-btn') as HTMLButtonElement;
 	const keygenBtn = $('keygen-btn') as HTMLButtonElement;
+	const polySelect = $('poly-select') as HTMLSelectElement;
+
+	function populatePolySelect(o: number): void {
+		const current = parseInt(polySelect.value, 10);
+		polySelect.innerHTML = '';
+		for (let k = 0; k < o; k++) {
+			const opt = document.createElement('option');
+			opt.value = String(k);
+			opt.textContent = `#${k + 1} of ${o}`;
+			polySelect.appendChild(opt);
+		}
+		polySelect.value = String(Math.min(Math.max(current, 0) || 0, o - 1));
+	}
+
+	function paintAnatomy(): void {
+		const host = $('anatomy-matrix');
+		if (!keys) {
+			host.innerHTML = '<p class="anatomy-empty">Generate a keypair to see the central map structure.</p>';
+			return;
+		}
+		const k = parseInt(polySelect.value, 10) || 0;
+		host.innerHTML = renderAnatomyMatrix(keys, k);
+	}
+
+	function paintLinearSystem(): void {
+		const host = $('linear-system');
+		if (!trace) {
+			host.setAttribute('hidden', '');
+			host.innerHTML = '';
+			return;
+		}
+		host.removeAttribute('hidden');
+		host.innerHTML = renderLinearSystem(trace);
+	}
+
+	polySelect.addEventListener('change', paintAnatomy);
 
 	function persistState(): void {
 		writeUrlState({
@@ -528,6 +665,10 @@ function renderPlayground(): HTMLElement {
 			$('key-status').innerHTML = `Keypair ready · n = ${v + o} variables · public map = ${o} quadratics in ${v + o} vars. <strong>Public key hides which variables are oil.</strong>`;
 			refreshTarget();
 			renderFingerprint();
+			populatePolySelect(o);
+			paintAnatomy();
+			trace = null;
+			paintLinearSystem();
 			signBtn.disabled = false;
 			benchBtn.disabled = false;
 			[okBtn, badBtn, msgBtn, verifyAllBtn].forEach((b) => (b.disabled = true));
@@ -558,9 +699,11 @@ function renderPlayground(): HTMLElement {
       <div class="trace-step"><span class="trace-label">Vinegar guess</span>
         <div class="trace-bytes">${byteGrid(trace.vinegar, { id: 'trace-vinegar', label: 'Random vinegar bytes' })}</div>
       </div>
+      <div class="trace-connector" aria-hidden="true"><span class="trace-connector__caption">fix vinegar &rarr; solve linear system</span></div>
       <div class="trace-step"><span class="trace-label">Solved oil</span>
         <div class="trace-bytes">${byteGrid(trace.oil, { id: 'trace-oil', label: 'Solved oil bytes' })}</div>
       </div>
+      <div class="trace-connector" aria-hidden="true"><span class="trace-connector__caption">apply secret transform S<sup>-1</sup></span></div>
       <div class="trace-step trace-step--highlight"><span class="trace-label">Signature</span>
         <div class="trace-bytes">${byteGrid(trace.signature, { id: 'trace-signature', label: 'Final signature bytes' })}</div>
       </div>
@@ -568,6 +711,7 @@ function renderPlayground(): HTMLElement {
         ${copyButton('trace-signature', 'Copy signature hex')}
       </div>
       <p class="section-footnote">Found a solvable system after ${trace.attempts} vinegar guess${trace.attempts === 1 ? '' : 'es'}. Signing is fast because fixing vinegar makes the equations linear.</p>`;
+		paintLinearSystem();
 		[okBtn, badBtn, msgBtn, verifyAllBtn].forEach((b) => (b.disabled = false));
 		announce(`Message signed in ${fmtMs(dt)} after ${trace.attempts} attempt${trace.attempts === 1 ? '' : 's'}. Verification options enabled.`);
 	}
@@ -770,17 +914,28 @@ function renderCompare(): HTMLElement {
 	const section = el('section', 'lab-section');
 	section.id = 'compare';
 	section.setAttribute('aria-labelledby', 'compare-heading');
-	const rows = SIG_COMPARE.map(
-		(r) => `
-    <tr class="math-row">
-      <td data-label="Family">${r.family}</td>
+	const maxPk = Math.max(...SIG_COMPARE.map((r) => r.pubKeyBytes));
+	const maxSig = Math.max(...SIG_COMPARE.map((r) => r.sigBytes));
+	const rows = SIG_COMPARE.map((r) => {
+		const familyClass = r.family.toLowerCase();
+		const pkPct = Math.max(0.4, (r.pubKeyBytes / maxPk) * 100).toFixed(2);
+		const sigPct = Math.max(0.4, (r.sigBytes / maxSig) * 100).toFixed(2);
+		return `
+    <tr class="math-row family-${familyClass}">
+      <td data-label="Family"><span class="family-dot family-dot--${familyClass}" aria-hidden="true"></span>${r.family}</td>
       <td data-label="Scheme"><strong>${r.scheme}</strong></td>
-      <td class="mono-cell" data-label="Public key">${r.pubKey}</td>
-      <td class="mono-cell" data-label="Signature">${r.sig}</td>
+      <td class="mono-cell size-cell" data-label="Public key">
+        <span class="size-cell__value">${r.pubKey}</span>
+        <span class="size-bar size-bar--pk" style="--pct: ${pkPct}%" aria-hidden="true"></span>
+      </td>
+      <td class="mono-cell size-cell" data-label="Signature">
+        <span class="size-cell__value">${r.sig}</span>
+        <span class="size-bar size-bar--sig" style="--pct: ${sigPct}%" aria-hidden="true"></span>
+      </td>
       <td data-label="Feels like" class="feel-cell">${r.feel}</td>
       <td data-label="Status">${statusChip(r.status)}</td>
-    </tr>`,
-	).join('');
+    </tr>`;
+	}).join('');
 	section.innerHTML = `
     <div class="section-heading-row">
       <div>
