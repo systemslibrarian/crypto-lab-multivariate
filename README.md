@@ -1,4 +1,4 @@
-# crypto-lab-multivariate
+# ccrypto-lab-multivariate
 
 ## What It Is
 
