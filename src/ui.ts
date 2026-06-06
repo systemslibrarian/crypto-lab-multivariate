@@ -16,6 +16,34 @@ function el<K extends keyof HTMLElementTagNameMap>(
 const hex = (b: number) => b.toString(16).padStart(2, '0').toUpperCase();
 const hexArr = (a: number[]) => a.map(hex).join(' ');
 
+// HSL-based color mapping: each byte gets a deterministic hue. Keeps decorative
+// only (also encoded as text for screen readers), so colorblind viewers don't
+// lose information.
+function byteColor(b: number): string {
+	const hue = (b * 137) % 360; // golden-angle distribution
+	return `hsl(${hue}, 62%, 58%)`;
+}
+
+function byteGrid(
+	bytes: number[],
+	options: { id?: string; label: string; tamperedIndex?: number } = { label: '' },
+): string {
+	const cells = bytes
+		.map((b, i) => {
+			const isTamper = options.tamperedIndex === i;
+			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}" aria-label="Byte ${i + 1}: ${hex(b)}${isTamper ? ', tampered' : ''}">
+				<span class="byte-cell__hex" aria-hidden="true">${hex(b)}</span>
+			</span>`;
+		})
+		.join('');
+	const idAttr = options.id ? ` id="${options.id}"` : '';
+	const hexCount = bytes.length;
+	return `<div${idAttr} class="byte-grid" role="group" aria-label="${options.label} (${hexCount} byte${hexCount === 1 ? '' : 's'})">
+		<span class="sr-only" data-byte-hex>${hexArr(bytes)}</span>
+		${cells}
+	</div>`;
+}
+
 function announce(msg: string): void {
 	const live = document.getElementById('sr-live');
 	if (!live) return;
@@ -43,6 +71,36 @@ function copyButton(targetId: string, label = 'Copy hex'): string {
 	</button>`;
 }
 
+function fmtMs(ms: number): string {
+	if (ms < 1) return '< 1 ms';
+	if (ms < 10) return `${ms.toFixed(2)} ms`;
+	if (ms < 1000) return `${ms.toFixed(1)} ms`;
+	return `${(ms / 1000).toFixed(2)} s`;
+}
+
+function trapdoorSvg(): string {
+	return `<svg class="trapdoor-svg" viewBox="0 0 320 220" aria-hidden="true" focusable="false">
+		<defs>
+			<linearGradient id="tdGrad" x1="0" x2="1" y1="0" y2="1">
+				<stop offset="0%" stop-color="var(--accent)" />
+				<stop offset="100%" stop-color="var(--accent-4)" />
+			</linearGradient>
+			<linearGradient id="tdHard" x1="0" x2="1" y1="0" y2="0">
+				<stop offset="0%" stop-color="var(--accent-2)" />
+				<stop offset="100%" stop-color="var(--accent-3)" />
+			</linearGradient>
+		</defs>
+		<rect x="14" y="14" width="292" height="86" rx="14" fill="none" stroke="url(#tdHard)" stroke-width="2" stroke-dasharray="6 5" />
+		<text x="160" y="46" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--ink-strong)">Public map P(x) — nonlinear</text>
+		<text x="160" y="72" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">solving for x is NP-hard</text>
+		<line x1="160" y1="106" x2="160" y2="128" stroke="var(--accent-3)" stroke-width="2" stroke-dasharray="3 3" />
+		<polygon points="155,124 165,124 160,134" fill="var(--accent-3)" />
+		<rect x="14" y="138" width="292" height="68" rx="14" fill="none" stroke="url(#tdGrad)" stroke-width="2" />
+		<text x="160" y="165" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--ink-strong)">Fix vinegar → linear in oil</text>
+		<text x="160" y="188" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--accent-4)">trapdoor: signer solves an o×o system</text>
+	</svg>`;
+}
+
 function renderHero(): HTMLElement {
 	const hero = el('header', 'hero-panel');
 	hero.setAttribute('role', 'banner');
@@ -51,9 +109,14 @@ function renderHero(): HTMLElement {
       <a class="portfolio-badge" href="https://github.com/systemslibrarian?tab=repositories&q=crypto-lab" aria-label="View other crypto-lab projects on GitHub">
         <span aria-hidden="true">⚙</span> crypto-lab · portfolio
       </a>
-      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="true">
-        <span class="theme-toggle__icon" aria-hidden="true">\u{1F319}</span>
-      </button>
+      <div class="hero-toolbar__right">
+        <button id="shortcuts-btn" class="icon-button" type="button" aria-label="Keyboard shortcuts" aria-expanded="false" aria-controls="shortcuts-panel" title="Keyboard shortcuts">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 12H4V7h16v10ZM6 9h2v2H6V9Zm0 4h2v2H6v-2Zm4-4h2v2h-2V9Zm0 4h2v2h-2v-2Zm4-4h2v2h-2V9Zm0 4h6v2h-6v-2Zm4-4h2v2h-2V9Z"/></svg>
+        </button>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="true">
+          <span class="theme-toggle__icon" aria-hidden="true">\u{1F319}</span>
+        </button>
+      </div>
     </div>
     <div class="hero-copy">
       <p class="eyebrow">Post-Quantum · Multivariate</p>
@@ -83,17 +146,24 @@ function renderHero(): HTMLElement {
         </p>
       </details>
     </div>
-    <aside class="hero-metric-card" aria-label="The MQ problem">
-      <p class="hero-metric-label">The MQ problem</p>
-      <div class="hero-metric-value" aria-hidden="true">
-        <div>Solve:</div>
-        <div>p₁(x) = y₁</div>
-        <div>p₂(x) = y₂</div>
-        <div>… over GF(256)</div>
-      </div>
-      <p class="sr-only">Solve a system of multivariate quadratic equations p sub 1 of x equals y sub 1, p sub 2 of x equals y sub 2, and so on, over the finite field GF(256).</p>
-      <p class="hero-metric-note">NP-hard in general · easy if you know the trapdoor</p>
+    <aside class="hero-metric-card" aria-label="How the trapdoor works">
+      <p class="hero-metric-label">The MQ trapdoor</p>
+      ${trapdoorSvg()}
+      <p class="hero-metric-note">NP-hard in general · easy if you know which variables are oil</p>
     </aside>
+    <div id="shortcuts-panel" class="shortcuts-panel" role="dialog" aria-label="Keyboard shortcuts" hidden>
+      <div class="shortcuts-panel__inner">
+        <h2 class="shortcuts-panel__title">Keyboard shortcuts</h2>
+        <ul>
+          <li><kbd>G</kbd> Generate new keypair</li>
+          <li><kbd>S</kbd> Sign current message</li>
+          <li><kbd>V</kbd> Verify as-is</li>
+          <li><kbd>T</kbd> Toggle theme</li>
+          <li><kbd>?</kbd> Show / hide this panel</li>
+        </ul>
+        <button type="button" class="ghost-button ghost-button--small" data-close-shortcuts>Close</button>
+      </div>
+    </div>
   `;
 	return hero;
 }
@@ -113,15 +183,23 @@ function renderPlayground(): HTMLElement {
           and verification all run client-side. Teaching parameters — not production-secure.
         </p>
       </div>
+      <div class="timing-strip" aria-label="Latest operation timings">
+        <div class="timing-pill" data-timing="keygen"><span class="timing-pill__label">Keygen</span><span class="timing-pill__value" id="t-keygen">—</span></div>
+        <div class="timing-pill" data-timing="sign"><span class="timing-pill__label">Sign</span><span class="timing-pill__value" id="t-sign">—</span></div>
+        <div class="timing-pill" data-timing="verify"><span class="timing-pill__label">Verify</span><span class="timing-pill__value" id="t-verify">—</span></div>
+      </div>
     </div>
 
     <div class="playground-grid">
       <div class="panel-card panel-card--wide" aria-labelledby="step-1-heading">
         <div class="panel-header">
           <h3 id="step-1-heading"><span class="step-num" aria-hidden="true">1</span> Message &amp; parameters</h3>
+          <button id="reset-btn" class="ghost-button ghost-button--small" type="button" title="Reset playground">
+            <span aria-hidden="true">↺</span> Reset
+          </button>
         </div>
         <label for="msg" class="field-label">Message to sign</label>
-        <textarea id="msg" class="message-input" rows="2" aria-describedby="msg-help">For the glory of God — 1 Cor 10:31</textarea>
+        <textarea id="msg" class="message-input" rows="2" aria-describedby="msg-help" autocomplete="off" spellcheck="false">For the glory of God — 1 Cor 10:31</textarea>
         <p id="msg-help" class="field-help">Change the message and watch the target hash change with it.</p>
 
         <div class="param-row" role="group" aria-label="UOV parameters">
@@ -133,8 +211,8 @@ function renderPlayground(): HTMLElement {
             <span class="param-row__name">Oil (o)</span>
             <select id="osel" aria-describedby="param-help"><option selected>3</option><option>4</option></select>
           </label>
-          <button id="keygen-btn" class="ghost-button" type="button">
-            <span aria-hidden="true">↻</span> Generate keypair
+          <button id="keygen-btn" class="ghost-button" type="button" aria-keyshortcuts="g">
+            <span aria-hidden="true">↻</span> Generate <kbd class="kbd-hint" aria-hidden="true">G</kbd>
           </button>
         </div>
         <p id="param-help" class="field-help">v &gt; o gives the &ldquo;unbalanced&rdquo; structure that resists the 1998 Kipnis–Shamir attack.</p>
@@ -146,9 +224,9 @@ function renderPlayground(): HTMLElement {
           <h3 id="step-2-heading"><span class="step-num" aria-hidden="true">2</span> Message hash (target)</h3>
         </div>
         <p class="panel-copy">The message hashes to an o-byte target the signature must hit.</p>
-        <div class="mono-block-wrap">
-          <div id="target-out" class="mono-block" aria-label="Hashed message target" aria-live="polite">—</div>
-          ${copyButton('target-out', 'Copy target hash hex')}
+        <div class="byte-grid-wrap">
+          <div id="target-byte-grid" class="byte-grid-host" aria-live="polite"></div>
+          ${copyButton('target-byte-grid', 'Copy target hash hex')}
         </div>
       </div>
 
@@ -157,8 +235,8 @@ function renderPlayground(): HTMLElement {
           <h3 id="step-3-heading"><span class="step-num" aria-hidden="true">3</span> Sign</h3>
         </div>
         <p class="panel-copy">Guess vinegar → the system goes linear in oil → solve.</p>
-        <button id="sign-btn" class="action-button" type="button" disabled aria-describedby="sign-help">
-          <span aria-hidden="true">✍</span> Sign message
+        <button id="sign-btn" class="action-button" type="button" disabled aria-describedby="sign-help" aria-keyshortcuts="s">
+          <span aria-hidden="true">✍</span> Sign message <kbd class="kbd-hint" aria-hidden="true">S</kbd>
         </button>
         <p id="sign-help" class="field-help">Produces a fresh signature — vinegar is randomised each time.</p>
         <div id="trace-out" class="trace-out" aria-live="polite"></div>
@@ -170,20 +248,30 @@ function renderPlayground(): HTMLElement {
         </div>
         <p class="panel-copy">A signature must satisfy P(signature) = target. Try to break that bond.</p>
         <ul class="scenario-grid" role="list">
-          <li class="scenario-card">
-            <h4>Valid signature</h4>
+          <li class="scenario-card" data-scenario="ok">
+            <div class="scenario-card__header">
+              <h4>Valid signature</h4>
+              <span class="scenario-card__icon" aria-hidden="true">✓</span>
+            </div>
             <p class="scenario-copy">Check the signature against the original target.</p>
-            <button id="verify-ok" class="ghost-button" type="button" disabled>Verify as-is</button>
+            <button id="verify-ok" class="ghost-button" type="button" disabled aria-keyshortcuts="v">Verify as-is</button>
             <p id="verify-ok-status" class="scenario-status scenario-status--pending" role="status" aria-live="polite">Awaiting signature</p>
           </li>
-          <li class="scenario-card">
-            <h4>Tampered signature</h4>
+          <li class="scenario-card" data-scenario="bad">
+            <div class="scenario-card__header">
+              <h4>Tampered signature</h4>
+              <span class="scenario-card__icon" aria-hidden="true">⚡</span>
+            </div>
             <p class="scenario-copy">Flip a single byte in the signature.</p>
             <button id="verify-bad" class="ghost-button" type="button" disabled>Flip one byte &amp; verify</button>
+            <div id="verify-bad-detail" class="scenario-detail" aria-hidden="true"></div>
             <p id="verify-bad-status" class="scenario-status scenario-status--pending" role="status" aria-live="polite">Awaiting signature</p>
           </li>
-          <li class="scenario-card">
-            <h4>Tampered message</h4>
+          <li class="scenario-card" data-scenario="msg">
+            <div class="scenario-card__header">
+              <h4>Tampered message</h4>
+              <span class="scenario-card__icon" aria-hidden="true">✎</span>
+            </div>
             <p class="scenario-copy">Re-hash an edited message and verify the old signature.</p>
             <button id="verify-msg" class="ghost-button" type="button" disabled>Change message &amp; verify</button>
             <p id="verify-msg-status" class="scenario-status scenario-status--pending" role="status" aria-live="polite">Awaiting signature</p>
@@ -205,82 +293,158 @@ function renderPlayground(): HTMLElement {
 	const okBtn = $('verify-ok') as HTMLButtonElement;
 	const badBtn = $('verify-bad') as HTMLButtonElement;
 	const msgBtn = $('verify-msg') as HTMLButtonElement;
+	const resetBtn = $('reset-btn') as HTMLButtonElement;
+
+	function setTiming(id: string, ms: number | null): void {
+		const node = section.querySelector('#' + id) as HTMLElement | null;
+		if (!node) return;
+		node.textContent = ms === null ? '—' : fmtMs(ms);
+		const pill = node.closest('.timing-pill');
+		if (pill && ms !== null) {
+			pill.classList.remove('is-fresh');
+			void (pill as HTMLElement).offsetWidth;
+			pill.classList.add('is-fresh');
+		}
+	}
 
 	function refreshTarget(): void {
 		if (!keys) return;
 		target = hashMessage(msg.value, keys.params.o);
-		$('target-out').textContent = hexArr(target);
+		$('target-byte-grid').innerHTML = byteGrid(target, { label: 'Target hash' });
 	}
 
 	function doKeygen(): void {
 		const v = parseInt(vsel.value, 10);
 		const o = parseInt(osel.value, 10);
+		const t0 = performance.now();
 		keys = keygen({ v, o });
+		const dt = performance.now() - t0;
+		setTiming('t-keygen', dt);
+		setTiming('t-sign', null);
+		setTiming('t-verify', null);
 		trace = null;
 		$('key-status').innerHTML = `Keypair ready · n = ${v + o} variables · public map = ${o} quadratics in ${v + o} vars. <strong>Public key hides which variables are oil.</strong>`;
 		refreshTarget();
 		signBtn.disabled = false;
 		[okBtn, badBtn, msgBtn].forEach((b) => (b.disabled = true));
 		$('trace-out').innerHTML = '';
+		(section.querySelectorAll('[data-scenario]') as NodeListOf<HTMLElement>).forEach((card) => {
+			card.classList.remove('is-valid', 'is-invalid');
+		});
 		['verify-ok-status', 'verify-bad-status', 'verify-msg-status'].forEach((id) => {
 			$(id).className = 'scenario-status scenario-status--pending';
 			$(id).textContent = 'Awaiting signature';
 		});
-		announce(`Keypair generated with ${v} vinegar and ${o} oil variables.`);
+		$('verify-bad-detail').innerHTML = '';
+		announce(`Keypair generated with ${v} vinegar and ${o} oil variables in ${fmtMs(dt)}.`);
 	}
 
 	function doSign(): void {
 		if (!keys) return;
 		refreshTarget();
+		const t0 = performance.now();
 		trace = sign(keys, target);
+		const dt = performance.now() - t0;
+		setTiming('t-sign', dt);
 		$('trace-out').innerHTML = `
-      <div class="trace-step"><span class="trace-label">Vinegar guess</span><span class="mono-inline" id="trace-vinegar">${hexArr(trace.vinegar)}</span></div>
-      <div class="trace-step"><span class="trace-label">Solved oil</span><span class="mono-inline" id="trace-oil">${hexArr(trace.oil)}</span></div>
-      <div class="trace-step"><span class="trace-label">Signature</span>
-        <span class="mono-inline trace-signature" id="trace-signature">${hexArr(trace.signature)}</span>
+      <div class="trace-step"><span class="trace-label">Vinegar guess</span>
+        <div class="trace-bytes">${byteGrid(trace.vinegar, { id: 'trace-vinegar', label: 'Random vinegar bytes' })}</div>
+      </div>
+      <div class="trace-step"><span class="trace-label">Solved oil</span>
+        <div class="trace-bytes">${byteGrid(trace.oil, { id: 'trace-oil', label: 'Solved oil bytes' })}</div>
+      </div>
+      <div class="trace-step trace-step--highlight"><span class="trace-label">Signature</span>
+        <div class="trace-bytes">${byteGrid(trace.signature, { id: 'trace-signature', label: 'Final signature bytes' })}</div>
       </div>
       <div class="trace-actions">
         ${copyButton('trace-signature', 'Copy signature hex')}
       </div>
       <p class="section-footnote">Found a solvable system after ${trace.attempts} vinegar guess${trace.attempts === 1 ? '' : 'es'}. Signing is fast because fixing vinegar makes the equations linear.</p>`;
 		[okBtn, badBtn, msgBtn].forEach((b) => (b.disabled = false));
-		announce(`Message signed in ${trace.attempts} attempt${trace.attempts === 1 ? '' : 's'}. Verification options enabled.`);
+		announce(`Message signed in ${fmtMs(dt)} after ${trace.attempts} attempt${trace.attempts === 1 ? '' : 's'}. Verification options enabled.`);
 	}
 
-	function setStatus(id: string, ok: boolean, text: string): void {
-		const node = $(id);
+	function setStatus(scenario: 'ok' | 'bad' | 'msg', ok: boolean, text: string): void {
+		const statusId = `verify-${scenario}-status`;
+		const node = $(statusId);
 		node.className = `scenario-status ${ok ? 'scenario-status--valid' : 'scenario-status--invalid'}`;
 		node.textContent = text;
+		const card = section.querySelector(`[data-scenario="${scenario}"]`) as HTMLElement | null;
+		if (card) {
+			card.classList.remove('is-valid', 'is-invalid');
+			void card.offsetWidth;
+			card.classList.add(ok ? 'is-valid' : 'is-invalid');
+		}
+	}
+
+	function withVerifyTime<T>(fn: () => T): T {
+		const t0 = performance.now();
+		const result = fn();
+		setTiming('t-verify', performance.now() - t0);
+		return result;
 	}
 
 	$('keygen-btn').addEventListener('click', doKeygen);
 	signBtn.addEventListener('click', doSign);
+	resetBtn.addEventListener('click', () => {
+		msg.value = 'For the glory of God — 1 Cor 10:31';
+		vsel.value = '6';
+		osel.value = '3';
+		doKeygen();
+		announce('Playground reset.');
+	});
 	msg.addEventListener('input', () => {
 		if (keys) refreshTarget();
 	});
 
 	okBtn.addEventListener('click', () => {
 		if (!keys || !trace) return;
-		const ok = verify(keys, target, trace.signature);
-		setStatus('verify-ok-status', ok, ok ? '✓ Valid — P(signature) = target' : '✗ Rejected');
+		const ok = withVerifyTime(() => verify(keys!, target, trace!.signature));
+		setStatus('ok', ok, ok ? '✓ Valid — P(signature) = target' : '✗ Rejected');
 	});
 	badBtn.addEventListener('click', () => {
 		if (!keys || !trace) return;
 		const bad = trace.signature.slice();
-		bad[0] = (bad[0] ^ 0x01) & 0xff;
-		const ok = verify(keys, target, bad);
-		setStatus('verify-bad-status', ok, ok ? 'Valid (unexpected!)' : '✗ Rejected — one flipped byte breaks it');
+		const tamperedIdx = Math.floor(Math.random() * bad.length);
+		const originalByte = bad[tamperedIdx];
+		bad[tamperedIdx] = (bad[tamperedIdx] ^ 0x01) & 0xff;
+		const ok = withVerifyTime(() => verify(keys!, target, bad));
+		$('verify-bad-detail').innerHTML = `
+			<p class="scenario-detail__caption">Byte ${tamperedIdx + 1} flipped: ${hex(originalByte)} → ${hex(bad[tamperedIdx])}</p>
+			${byteGrid(bad, { label: 'Tampered signature bytes', tamperedIndex: tamperedIdx })}`;
+		$('verify-bad-detail').setAttribute('aria-hidden', 'false');
+		setStatus('bad', ok, ok ? 'Valid (unexpected!)' : `✗ Rejected — byte ${tamperedIdx + 1} flipped`);
 	});
 	msgBtn.addEventListener('click', () => {
 		if (!keys || !trace) return;
 		const otherTarget = hashMessage(msg.value + ' (edited)', keys.params.o);
-		const ok = verify(keys, otherTarget, trace.signature);
-		setStatus('verify-msg-status', ok, ok ? 'Valid (unexpected!)' : '✗ Rejected — signature is bound to the message');
+		const ok = withVerifyTime(() => verify(keys!, otherTarget, trace!.signature));
+		setStatus('msg', ok, ok ? 'Valid (unexpected!)' : '✗ Rejected — signature is bound to the message');
 	});
 
 	// auto-run once so the page is alive on load
 	queueMicrotask(() => {
 		doKeygen();
+	});
+
+	// keyboard shortcuts (only when no input is focused)
+	document.addEventListener('keydown', (event) => {
+		const target = event.target as HTMLElement;
+		if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+			return;
+		}
+		if (event.altKey || event.ctrlKey || event.metaKey) return;
+		const key = event.key.toLowerCase();
+		if (key === 'g') {
+			event.preventDefault();
+			doKeygen();
+		} else if (key === 's' && !signBtn.disabled) {
+			event.preventDefault();
+			doSign();
+		} else if (key === 'v' && !okBtn.disabled) {
+			event.preventDefault();
+			okBtn.click();
+		}
 	});
 
 	return section;
@@ -352,7 +516,7 @@ function renderCompare(): HTMLElement {
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <p class="section-footnote table-hint" aria-hidden="true">Scroll horizontally on small screens to see all columns.</p>
+    <p class="section-footnote table-hint">Scroll horizontally on small screens to see all columns.</p>
   `;
 	return section;
 }
@@ -420,7 +584,10 @@ function wireCopyButtons(root: HTMLElement): void {
 		if (!sourceId) return;
 		const source = document.getElementById(sourceId);
 		if (!source) return;
-		const text = (source.textContent || '').trim();
+		// prefer the data-byte-hex sr-only span if present (pure hex stream),
+		// otherwise fall back to the element's text content.
+		const hexNode = source.querySelector('[data-byte-hex]');
+		const text = (hexNode?.textContent ?? source.textContent ?? '').trim();
 		if (!text) return;
 		const finish = (ok: boolean) => {
 			const label = button.querySelector('.copy-button__label');
@@ -457,6 +624,37 @@ function wireCopyButtons(root: HTMLElement): void {
 	});
 }
 
+function wireShortcutsPanel(root: HTMLElement): void {
+	const btn = root.querySelector('#shortcuts-btn') as HTMLButtonElement | null;
+	const panel = root.querySelector('#shortcuts-panel') as HTMLElement | null;
+	if (!btn || !panel) return;
+	const closeBtn = panel.querySelector('[data-close-shortcuts]') as HTMLButtonElement | null;
+	const isHidden = () => Boolean(panel.hidden);
+	const open = (state: boolean) => {
+		panel.hidden = !state;
+		btn.setAttribute('aria-expanded', String(state));
+		if (state) {
+			closeBtn?.focus();
+		}
+	};
+	btn.addEventListener('click', () => open(isHidden()));
+	closeBtn?.addEventListener('click', () => {
+		open(false);
+		btn.focus();
+	});
+	document.addEventListener('keydown', (event) => {
+		const t = event.target as HTMLElement;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+		if (event.key === '?' || (event.shiftKey && event.key === '/')) {
+			event.preventDefault();
+			open(isHidden());
+		} else if (event.key === 'Escape' && !isHidden()) {
+			open(false);
+			btn.focus();
+		}
+	});
+}
+
 export function mountApp(root: HTMLDivElement): void {
 	const main = el('main', 'page-shell');
 	main.id = 'main-content';
@@ -471,5 +669,6 @@ export function mountApp(root: HTMLDivElement): void {
 	);
 	root.appendChild(main);
 	wireCopyButtons(main);
+	wireShortcutsPanel(main);
 	void evalMap; // referenced for potential debugging hooks
 }
