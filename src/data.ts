@@ -138,3 +138,53 @@ export const SIG_COMPARE: SigCompare[] = [
 		status: 'research',
 	},
 ];
+
+// Preset scenarios — quick entry points for different audiences.
+export interface Preset {
+	id: string;
+	label: string;
+	emoji: string;
+	v: number;
+	o: number;
+	message?: string;
+	autoAction?: 'sign' | 'bench' | 'verify-all';
+	caption: string;
+}
+
+export const PRESETS: Preset[] = [
+	{
+		id: 'default',
+		label: 'Default UOV',
+		emoji: '◆',
+		v: 6,
+		o: 3,
+		caption: 'Balanced teaching parameters. The standard way to start.',
+	},
+	{
+		id: 'tiny',
+		label: 'Smallest system',
+		emoji: '▣',
+		v: 4,
+		o: 3,
+		autoAction: 'bench',
+		caption: 'Smallest parameters. How fast can your device sign? Auto-runs a 200-sig benchmark.',
+	},
+	{
+		id: 'big',
+		label: 'Bigger keys',
+		emoji: '▦',
+		v: 8,
+		o: 4,
+		caption: 'Larger parameters — keygen slows visibly, signatures stay tiny.',
+	},
+	{
+		id: 'forgery',
+		label: 'Watch a forgery fail',
+		emoji: '⚡',
+		v: 6,
+		o: 3,
+		message: 'I, your bank, authorize this transfer.',
+		autoAction: 'verify-all',
+		caption: 'Same params, dramatic message. Auto-runs all three verifications.',
+	},
+];

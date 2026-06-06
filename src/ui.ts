@@ -1,6 +1,6 @@
 // ui.ts — Multivariate cryptography lab UI.
 import { keygen, sign, verify, hashMessage, evalMap, type UovKeys, type SignTrace, type Quad } from './uov.ts';
-import { SCHEMES, BEULLENS_STORY, SIG_COMPARE, type MvScheme } from './data.ts';
+import { SCHEMES, BEULLENS_STORY, SIG_COMPARE, PRESETS, type MvScheme, type Preset } from './data.ts';
 
 function el<K extends keyof HTMLElementTagNameMap>(
 	tag: K,
@@ -285,23 +285,26 @@ function renderHero(): HTMLElement {
     <div class="hero-copy">
       <p class="eyebrow">Post-Quantum · Multivariate</p>
       <h1>Oil <span class="hero-amp" aria-hidden="true">&amp;</span><span class="sr-only">and</span> Vinegar</h1>
-      <p class="hero-text">${dual(
-				`Multivariate cryptography builds signatures on the hardness of solving systems of
-				quadratic equations. This lab runs a real, working Unbalanced Oil-and-Vinegar (UOV)
-				scheme over GF(256) in your browser — sign a message, watch the trapdoor turn a
-				hard nonlinear problem into an easy linear one, then see why Rainbow, the layered
-				version, was broken on a laptop in 2022.`,
-				`Digital signatures prove a message really came from you. This page does it with
-				a method called <em>Oil and Vinegar</em>: there's a math puzzle that looks
-				impossible to outsiders, but the signer holds a secret shortcut. Below, you sign
-				a message in your browser, then see how a researcher cracked the famous
-				&ldquo;Rainbow&rdquo; version in a single weekend in 2022.`,
+      <p class="hero-lede">${dual(
+				`Sign a message with a real post-quantum scheme — then watch the secret shortcut turn a
+				hard algebra problem into a one-step solve.`,
+				`Sign a message with real post-quantum math, then watch the secret shortcut deflate
+				the puzzle into ordinary algebra.`,
+			)}</p>
+      <p class="hero-text hero-text--subtle">${dual(
+				`This is Unbalanced Oil-and-Vinegar (UOV) over GF(256), running entirely in your browser.
+				Keys, signing, verification, and the 2022 attack that broke Rainbow — all visualized.`,
+				`The whole thing — keys, signature, the 2022 break — runs in your browser. No
+				servers, no fake animation.`,
 			)}</p>
       <div class="hero-actions">
-        <a class="action-button action-button--small" href="#playground-heading">
-          <span aria-hidden="true">▶</span> Try the demo
+        <button id="tour-start" class="action-button action-button--small" type="button" aria-keyshortcuts="d">
+          <span aria-hidden="true">✨</span> Run 60-sec demo
+        </button>
+        <a class="ghost-button ghost-button--small" href="#playground-heading">
+          <span aria-hidden="true">▶</span> Try it yourself
         </a>
-        <a class="ghost-button ghost-button--small" href="#attack-heading">
+        <a class="ghost-button ghost-button--small hero-actions__quiet" href="#attack-heading">
           How Rainbow fell
         </a>
       </div>
@@ -383,6 +386,17 @@ function renderPlayground(): HTMLElement {
         <div class="timing-pill" data-timing="verify"><span class="timing-pill__label">Verify</span><span class="timing-pill__value" id="t-verify">—</span></div>
       </div>
     </div>
+
+    <div class="preset-strip" role="group" aria-label="Quick presets">
+      ${PRESETS.map(
+				(p) => `<button type="button" class="preset-chip" data-preset="${p.id}" title="${p.caption}">
+				<span class="preset-chip__icon" aria-hidden="true">${p.emoji}</span>
+				<span class="preset-chip__label">${p.label}</span>
+				<span class="preset-chip__params" aria-hidden="true">v=${p.v} · o=${p.o}</span>
+			</button>`,
+			).join('')}
+    </div>
+    <p id="preset-caption" class="preset-caption" role="status" aria-live="polite"></p>
 
     <div class="playground-grid">
       <div class="panel-card panel-card--wide" aria-labelledby="step-1-heading">
@@ -476,9 +490,14 @@ function renderPlayground(): HTMLElement {
       <div class="panel-card panel-card--wide" aria-labelledby="step-4-heading">
         <div class="panel-header">
           <h3 id="step-4-heading"><span class="step-num" aria-hidden="true">4</span> Verify</h3>
-          <button id="verify-all-btn" class="ghost-button ghost-button--small" type="button" disabled title="Run all three verification scenarios">
-            <span aria-hidden="true">⟳</span> ${dual('Run all', 'Try all three')}
-          </button>
+          <div class="panel-header__actions">
+            <button id="verify-all-btn" class="ghost-button ghost-button--small" type="button" disabled title="Run all three verification scenarios">
+              <span aria-hidden="true">⟳</span> ${dual('Run all', 'Try all three')}
+            </button>
+            <button id="receipt-btn" class="ghost-button ghost-button--small" type="button" disabled title="Save a shareable result card">
+              <span aria-hidden="true">🎟</span> ${dual('Save card', 'Save receipt')}
+            </button>
+          </div>
         </div>
         <p class="panel-copy">${dual(
 					'A signature must satisfy P(signature) = target. Try to break that bond.',
@@ -559,6 +578,7 @@ function renderPlayground(): HTMLElement {
 	const badBtn = $('verify-bad') as HTMLButtonElement;
 	const msgBtn = $('verify-msg') as HTMLButtonElement;
 	const verifyAllBtn = $('verify-all-btn') as HTMLButtonElement;
+	const receiptBtn = $('receipt-btn') as HTMLButtonElement;
 	const resetBtn = $('reset-btn') as HTMLButtonElement;
 	const keygenBtn = $('keygen-btn') as HTMLButtonElement;
 	const polySelect = $('poly-select') as HTMLSelectElement;
@@ -671,7 +691,7 @@ function renderPlayground(): HTMLElement {
 			paintLinearSystem();
 			signBtn.disabled = false;
 			benchBtn.disabled = false;
-			[okBtn, badBtn, msgBtn, verifyAllBtn].forEach((b) => (b.disabled = true));
+			[okBtn, badBtn, msgBtn, verifyAllBtn, receiptBtn].forEach((b) => (b.disabled = true));
 			$('trace-out').innerHTML = `<p class="trace-empty">${dual(
 				'No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.',
 				'Nothing signed yet. Hit <kbd>S</kbd> or the Sign button to watch the secret shortcut produce a signature, byte by byte.',
@@ -712,7 +732,7 @@ function renderPlayground(): HTMLElement {
       </div>
       <p class="section-footnote">Found a solvable system after ${trace.attempts} vinegar guess${trace.attempts === 1 ? '' : 'es'}. Signing is fast because fixing vinegar makes the equations linear.</p>`;
 		paintLinearSystem();
-		[okBtn, badBtn, msgBtn, verifyAllBtn].forEach((b) => (b.disabled = false));
+		[okBtn, badBtn, msgBtn, verifyAllBtn, receiptBtn].forEach((b) => (b.disabled = false));
 		announce(`Message signed in ${fmtMs(dt)} after ${trace.attempts} attempt${trace.attempts === 1 ? '' : 's'}. Verification options enabled.`);
 	}
 
@@ -797,6 +817,36 @@ function renderPlayground(): HTMLElement {
 	benchBtn.addEventListener('click', () => {
 		void doBenchmark();
 	});
+
+	async function applyPreset(preset: Preset): Promise<void> {
+		vsel.value = String(preset.v);
+		osel.value = String(preset.o);
+		if (preset.message !== undefined) msg.value = preset.message;
+		persistState();
+		(section.querySelectorAll('[data-preset]') as NodeListOf<HTMLButtonElement>).forEach((b) => {
+			b.classList.toggle('is-active', b.getAttribute('data-preset') === preset.id);
+		});
+		const cap = section.querySelector('#preset-caption');
+		if (cap) cap.textContent = preset.caption;
+		await doKeygen();
+		if (preset.autoAction === 'sign') {
+			doSign();
+		} else if (preset.autoAction === 'bench') {
+			void doBenchmark();
+		} else if (preset.autoAction === 'verify-all') {
+			doSign();
+			window.setTimeout(() => verifyAllBtn.click(), 600);
+		}
+		announce(`Preset applied: ${preset.label}.`);
+	}
+
+	(section.querySelectorAll('[data-preset]') as NodeListOf<HTMLButtonElement>).forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const id = btn.getAttribute('data-preset');
+			const preset = PRESETS.find((p) => p.id === id);
+			if (preset) void applyPreset(preset);
+		});
+	});
 	resetBtn.addEventListener('click', () => {
 		msg.value = DEFAULT_MSG;
 		vsel.value = '6';
@@ -843,6 +893,24 @@ function renderPlayground(): HTMLElement {
 		okBtn.click();
 		window.setTimeout(() => badBtn.click(), 220);
 		window.setTimeout(() => msgBtn.click(), 440);
+	});
+	receiptBtn.addEventListener('click', () => {
+		if (!keys || !trace) return;
+		const fp = pubKeyFingerprint(keys.P, keys.n);
+		openResultCard({
+			message: msg.value,
+			v: keys.params.v,
+			o: keys.params.o,
+			target,
+			signature: trace.signature,
+			fingerprint: fp,
+			attempts: trace.attempts,
+			timings: {
+				keygen: $('t-keygen').textContent || '—',
+				sign: $('t-sign').textContent || '—',
+				verify: $('t-verify').textContent || '—',
+			},
+		});
 	});
 
 	const url = readUrlState();
@@ -1259,6 +1327,482 @@ function wireFirstVisitHint(): void {
 	window.setTimeout(markFirstVisitSeen, 12000);
 }
 
+// --- Guided demo tour -----------------------------------------------------
+interface TourStep {
+	caption: string;
+	action?: () => void | Promise<void>;
+	spotlight?: string;
+	scrollTo?: string;
+	duration: number;
+}
+
+const TOUR_STEPS: TourStep[] = [
+	{
+		caption: "Welcome. We'll generate a keypair, sign a message, try to forge it, then look at why the math works.",
+		duration: 2800,
+		scrollTo: '#playground-heading',
+	},
+	{
+		caption: 'Generating a fresh keypair — random over GF(256).',
+		action: () => (document.getElementById('keygen-btn') as HTMLButtonElement | null)?.click(),
+		spotlight: '#keygen-btn',
+		duration: 2200,
+	},
+	{
+		caption: "This 12-byte fingerprint is the verifier's anchor — a stand-in for the full public key.",
+		spotlight: '#pk-fingerprint',
+		duration: 2800,
+	},
+	{
+		caption: 'Now we sign. Watch the byte rows fill in — vinegar, oil, then the signature.',
+		action: () => (document.getElementById('sign-btn') as HTMLButtonElement | null)?.click(),
+		spotlight: '#step-3-heading',
+		duration: 2400,
+	},
+	{
+		caption: 'Random vinegar bytes — these are guessed. They turn the central polynomials linear in oil.',
+		spotlight: '#trace-vinegar',
+		duration: 2600,
+	},
+	{
+		caption: 'Solved oil — what Gaussian elimination spat out once the system collapsed.',
+		spotlight: '#trace-oil',
+		duration: 2600,
+	},
+	{
+		caption: "And the signature itself — the bytes the verifier actually checks.",
+		spotlight: '#trace-signature',
+		duration: 2400,
+	},
+	{
+		caption: 'Standard verification: P(signature) = target. Valid.',
+		action: () => (document.getElementById('verify-ok') as HTMLButtonElement | null)?.click(),
+		spotlight: '[data-scenario="ok"]',
+		duration: 2400,
+	},
+	{
+		caption: "Flip one byte and it's rejected — the signature is brittle on purpose.",
+		action: () => (document.getElementById('verify-bad') as HTMLButtonElement | null)?.click(),
+		spotlight: '[data-scenario="bad"]',
+		duration: 2400,
+	},
+	{
+		caption: 'Edit the message — also rejected. The signature is bound to the exact bytes.',
+		action: () => (document.getElementById('verify-msg') as HTMLButtonElement | null)?.click(),
+		spotlight: '[data-scenario="msg"]',
+		duration: 2400,
+	},
+	{
+		caption: 'And here is why it all works: in the central map, the oil × oil region is forced to zero. That zero block IS the trapdoor.',
+		spotlight: '#step-5-heading',
+		scrollTo: '#step-5-heading',
+		duration: 3400,
+	},
+	{
+		caption: 'Short signatures · massive public keys · fragile structure. That is the multivariate story — and why Rainbow lost in 2022.',
+		duration: 4000,
+	},
+];
+
+interface TourController {
+	stop: () => void;
+}
+
+function renderTourOverlay(): HTMLElement {
+	const overlay = el('div', 'tour-caption');
+	overlay.setAttribute('role', 'status');
+	overlay.setAttribute('aria-live', 'polite');
+	overlay.hidden = true;
+	overlay.innerHTML = `
+		<div class="tour-caption__bar">
+			<span class="tour-caption__step" id="tour-step-counter">1 / ${TOUR_STEPS.length}</span>
+			<div class="tour-caption__progress"><div class="tour-caption__fill" id="tour-fill" style="width: 0%"></div></div>
+		</div>
+		<p class="tour-caption__text" id="tour-text">…</p>
+		<div class="tour-caption__actions">
+			<button type="button" class="ghost-button ghost-button--small" data-tour="next">Next</button>
+			<button type="button" class="ghost-button ghost-button--small" data-tour="exit">Exit</button>
+		</div>
+	`;
+	return overlay;
+}
+
+let currentTour: TourController | null = null;
+
+function startTour(): void {
+	if (currentTour) return;
+	const overlay = document.querySelector('.tour-caption') as HTMLElement;
+	if (!overlay) return;
+	overlay.hidden = false;
+	document.documentElement.classList.add('is-tour-running');
+	let idx = -1;
+	let timer: number | undefined;
+	let aborted = false;
+	let currentSpotlight: HTMLElement | null = null;
+
+	function clearSpotlight(): void {
+		if (currentSpotlight) {
+			currentSpotlight.classList.remove('is-tour-target');
+			currentSpotlight = null;
+		}
+	}
+
+	function setSpotlight(selector: string | undefined): void {
+		clearSpotlight();
+		if (!selector) return;
+		const node = document.querySelector(selector) as HTMLElement | null;
+		if (!node) return;
+		currentSpotlight = node;
+		node.classList.add('is-tour-target');
+		node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
+
+	function setProgress(stepIdx: number): void {
+		const counter = document.getElementById('tour-step-counter');
+		const fill = document.getElementById('tour-fill');
+		if (counter) counter.textContent = `${stepIdx + 1} / ${TOUR_STEPS.length}`;
+		if (fill) fill.style.width = `${((stepIdx + 1) / TOUR_STEPS.length) * 100}%`;
+	}
+
+	async function runStep(): Promise<void> {
+		if (aborted) return;
+		idx++;
+		if (idx >= TOUR_STEPS.length) {
+			endTour();
+			return;
+		}
+		const step = TOUR_STEPS[idx];
+		setProgress(idx);
+		const text = document.getElementById('tour-text');
+		if (text) text.textContent = step.caption;
+		announce(step.caption);
+		if (step.scrollTo) {
+			const target = document.querySelector(step.scrollTo);
+			target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+		if (step.action) {
+			try {
+				await step.action();
+			} catch {
+				/* ignore */
+			}
+		}
+		setSpotlight(step.spotlight);
+		timer = window.setTimeout(runStep, step.duration);
+	}
+
+	function endTour(): void {
+		clearSpotlight();
+		overlay.hidden = true;
+		document.documentElement.classList.remove('is-tour-running');
+		currentTour = null;
+		if (timer !== undefined) window.clearTimeout(timer);
+	}
+
+	function next(): void {
+		if (timer !== undefined) window.clearTimeout(timer);
+		void runStep();
+	}
+
+	const nextBtn = overlay.querySelector('[data-tour="next"]') as HTMLButtonElement | null;
+	const exitBtn = overlay.querySelector('[data-tour="exit"]') as HTMLButtonElement | null;
+	nextBtn?.addEventListener('click', next);
+	exitBtn?.addEventListener('click', () => {
+		aborted = true;
+		endTour();
+	});
+
+	const escHandler = (e: KeyboardEvent) => {
+		if (e.key === 'Escape') {
+			aborted = true;
+			endTour();
+			document.removeEventListener('keydown', escHandler);
+		}
+	};
+	document.addEventListener('keydown', escHandler);
+
+	currentTour = {
+		stop: () => {
+			aborted = true;
+			endTour();
+		},
+	};
+	void runStep();
+}
+
+// --- Result card ----------------------------------------------------------
+interface ResultCardData {
+	message: string;
+	v: number;
+	o: number;
+	target: number[];
+	signature: number[];
+	fingerprint: number[];
+	attempts: number;
+	timings: { keygen: string; sign: string; verify: string };
+}
+
+function summaryText(data: ResultCardData): string {
+	const truncMsg = data.message.length > 80 ? data.message.slice(0, 77) + '…' : data.message;
+	return [
+		'Oil & Vinegar — Multivariate Crypto Lab',
+		`UOV v=${data.v} o=${data.o} over GF(256)`,
+		'',
+		`Message: "${truncMsg}"`,
+		`Target hash (${data.target.length} B):  ${data.target.map(hex).join(' ')}`,
+		`Signature  (${data.signature.length} B):  ${data.signature.map(hex).join(' ')}`,
+		`Fingerprint (${data.fingerprint.length} B): ${data.fingerprint.map(hex).join(' ')}`,
+		'',
+		`Keygen ${data.timings.keygen}  ·  Sign ${data.timings.sign} (${data.attempts} attempts)  ·  Verify ${data.timings.verify}`,
+		'',
+		'Try it: https://systemslibrarian.github.io/crypto-lab-multivariate/',
+	].join('\n');
+}
+
+function drawResultCardPng(data: ResultCardData): Promise<Blob | null> {
+	return new Promise((resolve) => {
+		const W = 1080;
+		const H = 608;
+		const canvas = document.createElement('canvas');
+		canvas.width = W;
+		canvas.height = H;
+		const rawCtx = canvas.getContext('2d');
+		if (!rawCtx) {
+			resolve(null);
+			return;
+		}
+		const ctx: CanvasRenderingContext2D = rawCtx;
+
+		const isDark =
+			document.documentElement.getAttribute('data-theme') === 'dark' ||
+			document.documentElement.getAttribute('data-theme') !== 'light';
+		const bgTop = isDark ? '#12101a' : '#fff7eb';
+		const bgBot = isDark ? '#1a1424' : '#f7efe9';
+		const fg = isDark ? '#f4f1f9' : '#15121a';
+		const muted = isDark ? '#b3a8c4' : '#524563';
+		const accent = isDark ? '#5ccff8' : '#0b6f96';
+		const accent2 = isDark ? '#ff7c7c' : '#b32d2d';
+		const accent4 = isDark ? '#4adfca' : '#0f6157';
+
+		// background gradient
+		const grad = ctx.createLinearGradient(0, 0, 0, H);
+		grad.addColorStop(0, bgTop);
+		grad.addColorStop(1, bgBot);
+		ctx.fillStyle = grad;
+		ctx.fillRect(0, 0, W, H);
+
+		// kicker
+		ctx.font = '700 18px "IBM Plex Mono", monospace';
+		ctx.fillStyle = accent2;
+		ctx.fillText('POST-QUANTUM · MULTIVARIATE', 64, 80);
+
+		// title
+		ctx.font = '700 64px "Space Grotesk", system-ui, sans-serif';
+		ctx.fillStyle = fg;
+		ctx.fillText('I just signed with UOV.', 64, 152);
+
+		// subtitle / params
+		ctx.font = '400 22px "Space Grotesk", system-ui, sans-serif';
+		ctx.fillStyle = muted;
+		ctx.fillText(
+			`v=${data.v}  ·  o=${data.o}  ·  GF(256)  ·  ${data.attempts} attempt${data.attempts === 1 ? '' : 's'}`,
+			64,
+			184,
+		);
+
+		// message bubble
+		const truncMsg = data.message.length > 56 ? data.message.slice(0, 53) + '…' : data.message;
+		ctx.font = 'italic 24px "Space Grotesk", system-ui, sans-serif';
+		ctx.fillStyle = fg;
+		ctx.fillText(`"${truncMsg}"`, 64, 232);
+
+		function drawByteRow(label: string, bytes: number[], y: number, accentColor: string): void {
+			ctx.font = '700 14px "IBM Plex Mono", monospace';
+			ctx.fillStyle = muted;
+			ctx.fillText(label.toUpperCase(), 64, y - 14);
+
+			const cellSize = Math.min(54, Math.floor((W - 128) / Math.max(bytes.length, 12)));
+			const gap = 6;
+			let x = 64;
+			for (let i = 0; i < bytes.length; i++) {
+				const hue = (bytes[i] * 137) % 360;
+				ctx.fillStyle = `hsl(${hue}, 62%, 58%)`;
+				ctx.globalAlpha = 0.35;
+				roundRect(ctx, x, y, cellSize, cellSize, 8);
+				ctx.fill();
+				ctx.globalAlpha = 1;
+				ctx.strokeStyle = `hsl(${hue}, 62%, 65%)`;
+				ctx.lineWidth = 1.4;
+				roundRect(ctx, x, y, cellSize, cellSize, 8);
+				ctx.stroke();
+				ctx.fillStyle = fg;
+				ctx.font = `700 ${Math.floor(cellSize * 0.42)}px "IBM Plex Mono", monospace`;
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(hex(bytes[i]), x + cellSize / 2, y + cellSize / 2 + 1);
+				ctx.textAlign = 'start';
+				ctx.textBaseline = 'alphabetic';
+				x += cellSize + gap;
+			}
+			// accent strip under the row
+			ctx.fillStyle = accentColor;
+			ctx.fillRect(64, y + cellSize + 6, x - 64 - gap, 2);
+		}
+
+		drawByteRow('Target hash', data.target, 280, accent);
+		drawByteRow('Signature', data.signature, 380, accent4);
+		drawByteRow('Pubkey fingerprint', data.fingerprint, 480, accent2);
+
+		// footer
+		ctx.font = '700 16px "IBM Plex Mono", monospace';
+		ctx.fillStyle = muted;
+		ctx.fillText(
+			`Keygen ${data.timings.keygen}  ·  Sign ${data.timings.sign}  ·  Verify ${data.timings.verify}`,
+			64,
+			572,
+		);
+		ctx.font = '700 14px "IBM Plex Mono", monospace';
+		ctx.fillStyle = accent;
+		ctx.fillText('systemslibrarian.github.io/crypto-lab-multivariate', 64, 594);
+
+		canvas.toBlob((blob) => resolve(blob), 'image/png');
+	});
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+	ctx.beginPath();
+	ctx.moveTo(x + r, y);
+	ctx.arcTo(x + w, y, x + w, y + h, r);
+	ctx.arcTo(x + w, y + h, x, y + h, r);
+	ctx.arcTo(x, y + h, x, y, r);
+	ctx.arcTo(x, y, x + w, y, r);
+	ctx.closePath();
+}
+
+function openResultCard(data: ResultCardData): void {
+	const existing = document.getElementById('result-modal');
+	existing?.remove();
+
+	const modal = el('div', 'result-modal');
+	modal.id = 'result-modal';
+	modal.setAttribute('role', 'dialog');
+	modal.setAttribute('aria-modal', 'true');
+	modal.setAttribute('aria-labelledby', 'result-modal-title');
+	modal.innerHTML = `
+		<div class="result-modal__backdrop" data-close></div>
+		<div class="result-modal__card" role="document">
+			<header class="result-modal__head">
+				<h2 id="result-modal-title">Your signature receipt</h2>
+				<button type="button" class="icon-button result-modal__close" data-close aria-label="Close result card">✕</button>
+			</header>
+			<canvas class="result-modal__preview" width="1080" height="608" aria-label="Result card preview"></canvas>
+			<dl class="result-modal__facts">
+				<div><dt>Message</dt><dd>${data.message.length > 70 ? data.message.slice(0, 67) + '…' : data.message}</dd></div>
+				<div><dt>Params</dt><dd>UOV v=${data.v} · o=${data.o} over GF(256)</dd></div>
+				<div><dt>Sign / verify</dt><dd>${data.timings.sign} · ${data.timings.verify}</dd></div>
+				<div><dt>Attempts</dt><dd>${data.attempts}</dd></div>
+			</dl>
+			<div class="result-modal__actions">
+				<button type="button" class="action-button action-button--small" data-action="png"><span aria-hidden="true">🖼</span> Download PNG</button>
+				<button type="button" class="ghost-button ghost-button--small" data-action="copy-text"><span aria-hidden="true">📋</span> Copy summary</button>
+				<button type="button" class="ghost-button ghost-button--small" data-action="copy-link"><span aria-hidden="true">🔗</span> Copy permalink</button>
+			</div>
+			<p class="result-modal__note">Educational only — these are toy parameters. Real UOV uses ~256-byte signatures and ~278 KB public keys.</p>
+		</div>
+	`;
+	document.body.appendChild(modal);
+	document.documentElement.classList.add('is-modal-open');
+
+	const closeBtns = modal.querySelectorAll('[data-close]');
+	const close = () => {
+		modal.remove();
+		document.documentElement.classList.remove('is-modal-open');
+		document.removeEventListener('keydown', onKey);
+	};
+	const onKey = (e: KeyboardEvent) => {
+		if (e.key === 'Escape') close();
+		if (e.key === 'Tab') {
+			// minimal focus trap: cycle inside the modal
+			const focusables = modal.querySelectorAll<HTMLElement>(
+				'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+			);
+			if (focusables.length === 0) return;
+			const first = focusables[0];
+			const last = focusables[focusables.length - 1];
+			if (e.shiftKey && document.activeElement === first) {
+				e.preventDefault();
+				last.focus();
+			} else if (!e.shiftKey && document.activeElement === last) {
+				e.preventDefault();
+				first.focus();
+			}
+		}
+	};
+	closeBtns.forEach((b) => b.addEventListener('click', close));
+	document.addEventListener('keydown', onKey);
+
+	// render preview canvas live
+	const preview = modal.querySelector('.result-modal__preview') as HTMLCanvasElement;
+	void drawResultCardPng(data).then((blob) => {
+		if (!blob) return;
+		const url = URL.createObjectURL(blob);
+		const img = new Image();
+		img.onload = () => {
+			const pctx = preview.getContext('2d');
+			pctx?.drawImage(img, 0, 0, 1080, 608);
+			URL.revokeObjectURL(url);
+		};
+		img.src = url;
+	});
+
+	modal.querySelector('[data-action="png"]')?.addEventListener('click', async () => {
+		const blob = await drawResultCardPng(data);
+		if (!blob) return;
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `uov-signature-${Date.now()}.png`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		setTimeout(() => URL.revokeObjectURL(url), 4000);
+		announce('PNG downloaded.');
+	});
+	modal.querySelector('[data-action="copy-text"]')?.addEventListener('click', async () => {
+		try {
+			await navigator.clipboard.writeText(summaryText(data));
+			announce('Summary copied to clipboard.');
+		} catch {
+			announce('Copy failed.');
+		}
+	});
+	modal.querySelector('[data-action="copy-link"]')?.addEventListener('click', async () => {
+		try {
+			await navigator.clipboard.writeText(location.href);
+			announce('Permalink copied.');
+		} catch {
+			announce('Copy failed.');
+		}
+	});
+
+	// initial focus
+	(modal.querySelector('[data-action="png"]') as HTMLElement | null)?.focus();
+}
+
+function wireTour(root: HTMLElement): void {
+	const startBtn = root.querySelector('#tour-start') as HTMLButtonElement | null;
+	startBtn?.addEventListener('click', () => startTour());
+	document.addEventListener('keydown', (event) => {
+		const t = event.target as HTMLElement;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+		if (event.altKey || event.ctrlKey || event.metaKey) return;
+		if (event.key.toLowerCase() === 'd') {
+			event.preventDefault();
+			startTour();
+		}
+	});
+}
+
 export function mountApp(root: HTMLDivElement): void {
 	const main = el('main', 'page-shell');
 	main.id = 'main-content';
@@ -1274,6 +1818,7 @@ export function mountApp(root: HTMLDivElement): void {
 	root.appendChild(main);
 	const backToTop = renderBackToTop();
 	document.body.appendChild(backToTop);
+	document.body.appendChild(renderTourOverlay());
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
 	wireShareButton();
@@ -1282,5 +1827,6 @@ export function mountApp(root: HTMLDivElement): void {
 	wireBackToTop(backToTop);
 	wireTextModeToggle();
 	wireFirstVisitHint();
+	wireTour(main);
 	void evalMap;
 }
