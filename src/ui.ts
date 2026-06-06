@@ -562,15 +562,21 @@ function renderPlayground(): HTMLElement {
       <div class="panel-card panel-card--full" aria-labelledby="step-5-heading">
         <div class="panel-header">
           <h3 id="step-5-heading"><span class="step-num" aria-hidden="true">5</span> ${dual('Anatomy of the trapdoor', 'Why the secret shortcut works')}</h3>
-          <label for="poly-select" class="poly-select-label">
-            <span class="param-row__name">Polynomial</span>
-            <select id="poly-select" aria-label="Choose which central polynomial to inspect"></select>
-          </label>
+          <div class="panel-header__actions">
+            <button id="collapse-btn" class="ghost-button ghost-button--small" type="button" disabled title="Animate the quadratic → linear collapse">
+              <span aria-hidden="true">▶</span> ${dual('Watch the collapse', 'Watch the math')}
+            </button>
+            <label for="poly-select" class="poly-select-label">
+              <span class="param-row__name">Polynomial</span>
+              <select id="poly-select" aria-label="Choose which central polynomial to inspect"></select>
+            </label>
+          </div>
         </div>
         <p class="panel-copy">${dual(
 					`Each of the <em>o</em> central polynomials is quadratic in <em>v + o</em> variables — but the <strong>oil × oil</strong> coefficients are forced to <strong>0</strong>. That blank red region <em>is</em> the trapdoor. Once vinegar is locked in, every remaining term is either constant or linear in oil, so a fast linear solve finishes the job.`,
 					`The signer secretly knows: the polynomial has a <strong>missing region</strong>. Wherever both inputs are "oil", the math is forced to zero. Once you pick random vinegar values, the puzzle deflates into ordinary linear algebra — instantly solvable.`,
 				)}</p>
+        <p id="collapse-caption" class="collapse-caption" hidden aria-live="polite"></p>
         <div class="anatomy-scroller">
           <div id="anatomy-matrix" class="anatomy-matrix-host"></div>
         </div>
@@ -631,7 +637,65 @@ function renderPlayground(): HTMLElement {
 		host.innerHTML = renderLinearSystem(trace);
 	}
 
+	let collapseInFlight = false;
+	let firstSignSeen = false;
+
+	async function runCollapseAnimation(): Promise<void> {
+		if (collapseInFlight) return;
+		const matrix = section.querySelector('.anatomy-matrix') as HTMLElement | null;
+		const caption = $('collapse-caption') as HTMLElement | null;
+		if (!matrix || !caption) return;
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		collapseInFlight = true;
+		const collapseBtn = $('collapse-btn') as HTMLButtonElement;
+		collapseBtn.disabled = true;
+
+		caption.hidden = false;
+		const phases: { cls: string; caption: string; wait: number }[] = [
+			{
+				cls: 'phase-1',
+				caption:
+					'1 · Fix vinegar. The blue V×V coefficients now multiply two known bytes — they collapse into constants.',
+				wait: reduced ? 250 : 1100,
+			},
+			{
+				cls: 'phase-2',
+				caption:
+					'2 · The gold V×O coefficients multiply one known × one unknown. Each one becomes a linear coefficient of oil.',
+				wait: reduced ? 250 : 1100,
+			},
+			{
+				cls: 'phase-3',
+				caption:
+					'3 · The red O×O region was already zero — that is the trapdoor structure baked into the central map.',
+				wait: reduced ? 250 : 1100,
+			},
+			{
+				cls: 'phase-4',
+				caption:
+					'4 · What is left is an o×o linear system A · oil = rhs. Gaussian-eliminate and signing is done.',
+				wait: reduced ? 250 : 1400,
+			},
+		];
+
+		for (const phase of phases) {
+			matrix.classList.remove('phase-1', 'phase-2', 'phase-3', 'phase-4');
+			matrix.classList.add(phase.cls);
+			caption.textContent = phase.caption;
+			announce(phase.caption);
+			await new Promise<void>((r) => window.setTimeout(r, phase.wait));
+		}
+
+		matrix.classList.remove('phase-1', 'phase-2', 'phase-3', 'phase-4');
+		caption.hidden = true;
+		collapseBtn.disabled = !keys;
+		collapseInFlight = false;
+	}
+
 	polySelect.addEventListener('change', paintAnatomy);
+	($('collapse-btn') as HTMLButtonElement).addEventListener('click', () => {
+		void runCollapseAnimation();
+	});
 
 	function persistState(): void {
 		writeUrlState({
@@ -706,6 +770,7 @@ function renderPlayground(): HTMLElement {
 			paintLinearSystem();
 			signBtn.disabled = false;
 			benchBtn.disabled = false;
+			($('collapse-btn') as HTMLButtonElement).disabled = false;
 			[okBtn, badBtn, msgBtn, verifyAllBtn, receiptBtn].forEach((b) => (b.disabled = true));
 			$('trace-out').innerHTML = `<p class="trace-empty">${dual(
 				'No signature yet. After generating a keypair, hit <kbd>S</kbd> or the sign button above to see the vinegar guess, the solved oil values, and the final signature byte-by-byte.',
@@ -717,6 +782,13 @@ function renderPlayground(): HTMLElement {
 			announce(`Keypair generated with ${v} vinegar and ${o} oil variables in ${fmtMs(dt)}.`);
 			persistState();
 			markFirstVisitSeen();
+			dispatchSchemeUpdate({
+				v,
+				o,
+				sigBytes: v + o,
+				pkBytes: o * (v + o) * (v + o + 1) * 0.5,
+				lastSignMs: null,
+			});
 		} finally {
 			keygenBtn.classList.remove('is-busy');
 			keygenBtn.disabled = false;
@@ -749,6 +821,19 @@ function renderPlayground(): HTMLElement {
 		paintLinearSystem();
 		[okBtn, badBtn, msgBtn, verifyAllBtn, receiptBtn].forEach((b) => (b.disabled = false));
 		announce(`Message signed in ${fmtMs(dt)} after ${trace.attempts} attempt${trace.attempts === 1 ? '' : 's'}. Verification options enabled.`);
+		dispatchSchemeUpdate({
+			v: keys.params.v,
+			o: keys.params.o,
+			sigBytes: trace.signature.length,
+			pkBytes: keys.params.o * keys.n * (keys.n + 1) * 0.5,
+			lastSignMs: dt,
+		});
+		// First sign of the session triggers the collapse animation so the
+		// "quadratic -> linear" claim feels visible, not asserted.
+		if (!firstSignSeen) {
+			firstSignSeen = true;
+			window.setTimeout(() => void runCollapseAnimation(), 350);
+		}
 	}
 
 	async function doBenchmark(): Promise<void> {
@@ -1736,6 +1821,65 @@ function showReplayHint(): void {
 }
 
 // --- Result card ----------------------------------------------------------
+// --- Scoreboard (sticky "why this matters") -------------------------------
+interface SchemeUpdate {
+	v: number;
+	o: number;
+	sigBytes: number;
+	pkBytes: number;
+	lastSignMs: number | null;
+}
+
+function dispatchSchemeUpdate(detail: SchemeUpdate): void {
+	document.dispatchEvent(new CustomEvent('mv:scheme-update', { detail }));
+}
+
+function renderScoreboard(): HTMLElement {
+	const board = el('aside', 'scoreboard');
+	board.id = 'scoreboard';
+	board.setAttribute('role', 'complementary');
+	board.setAttribute('aria-label', 'Current scheme summary');
+	board.hidden = true;
+	board.innerHTML = `
+		<div class="scoreboard__header">
+			<span class="scoreboard__kicker">Now playing</span>
+			<span class="scoreboard__status">Research</span>
+		</div>
+		<div class="scoreboard__scheme" id="sb-scheme">UOV —</div>
+		<dl class="scoreboard__stats">
+			<div><dt>Sig</dt><dd id="sb-sig">— B</dd></div>
+			<div><dt>Pubkey</dt><dd id="sb-pk">— B</dd></div>
+			<div><dt>Sign</dt><dd id="sb-time">—</dd></div>
+		</dl>
+		<p class="scoreboard__takeaway">Tiny sigs · big keys · fragile structure</p>
+	`;
+	return board;
+}
+
+function wireScoreboard(): void {
+	const board = document.getElementById('scoreboard');
+	if (!board) return;
+	const scheme = document.getElementById('sb-scheme');
+	const sig = document.getElementById('sb-sig');
+	const pk = document.getElementById('sb-pk');
+	const time = document.getElementById('sb-time');
+	const fmtBytes = (n: number): string => {
+		if (n < 1024) return `${Math.round(n)} B`;
+		if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+		return `${(n / 1024 / 1024).toFixed(2)} MB`;
+	};
+	const fmtMsShort = (ms: number): string =>
+		ms < 1 ? '< 1 ms' : ms < 10 ? `${ms.toFixed(2)} ms` : `${ms.toFixed(1)} ms`;
+	document.addEventListener('mv:scheme-update', ((event: Event) => {
+		const detail = (event as CustomEvent<SchemeUpdate>).detail;
+		board.hidden = false;
+		if (scheme) scheme.textContent = `UOV v=${detail.v} · o=${detail.o}`;
+		if (sig) sig.textContent = fmtBytes(detail.sigBytes);
+		if (pk) pk.textContent = fmtBytes(detail.pkBytes);
+		if (time) time.textContent = detail.lastSignMs == null ? '—' : fmtMsShort(detail.lastSignMs);
+	}) as EventListener);
+}
+
 interface ResultCardData {
 	message: string;
 	v: number;
@@ -2026,6 +2170,7 @@ export function mountApp(root: HTMLDivElement): void {
 	document.body.appendChild(backToTop);
 	document.body.appendChild(renderTourOverlay());
 	document.body.appendChild(renderReplayHint());
+	document.body.appendChild(renderScoreboard());
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
 	wireShareButton();
@@ -2036,5 +2181,6 @@ export function mountApp(root: HTMLDivElement): void {
 	wireAudienceMode();
 	wireFirstVisitHint();
 	wireTour(main);
+	wireScoreboard();
 	void evalMap;
 }
