@@ -1,4 +1,4 @@
-# ccrypto-lab-multivariate
+# crypto-lab-multivariate
 
 ## What It Is
 
@@ -14,7 +14,7 @@ A hands-on demonstration of multivariate cryptography, the post-quantum family w
 
 ## Live Demo
 
-[**https://systemslibrarian.github.io/crypto-lab-multivariate/**](https://systemslibrarian.github.io/crypto-lab-multivariate/)
+**[systemslibrarian.github.io/crypto-lab-multivariate](https://systemslibrarian.github.io/crypto-lab-multivariate/)**
 
 Pick the number of vinegar and oil variables, generate a keypair, and sign a message. The signing panel shows the random vinegar guess, the solved oil values, and the resulting signature, plus how many guesses were needed before a solvable linear system appeared. Three verification cards let you confirm a valid signature, flip a single signature byte, and edit the message — the last two are rejected, showing the signature is bound to both the key and the message. Below the playground, a five-step walkthrough explains the Beullens 2022 attack, a lineage of Oil-and-Vinegar schemes, and a table comparing signature sizes across the lattice, hash, and multivariate families.
 
@@ -34,16 +34,33 @@ Pick the number of vinegar and oil variables, generate a keypair, and sign a mes
 - **Cryptanalysis research** — the Oil-and-Vinegar family is a standard teaching and research target for understanding structural attacks like MinRank.
 - **Historical lesson** — the repeated breaks of multivariate trapdoors are routinely cited as motivation for preferring lattice-based assumptions.
 
+## How to Run Locally
+
+```bash
+git clone https://github.com/systemslibrarian/crypto-lab-multivariate
+cd crypto-lab-multivariate
+npm install
+npm run dev
+```
+
+## Related Demos
+
+- [crypto-lab-dilithium-seal](https://systemslibrarian.github.io/crypto-lab-dilithium-seal/) — ML-DSA lattice signatures, the family NIST chose over multivariate.
+- [crypto-lab-falcon-seal](https://systemslibrarian.github.io/crypto-lab-falcon-seal/) — Falcon/FN-DSA NTRU lattice signatures with compact output.
+- [crypto-lab-sphincs-ledger](https://systemslibrarian.github.io/crypto-lab-sphincs-ledger/) — SLH-DSA hash-based signatures, a conservative PQ alternative.
+- [crypto-lab-mpcith-sign](https://systemslibrarian.github.io/crypto-lab-mpcith-sign/) — MPC-in-the-Head signatures, another non-lattice PQ approach.
+- [crypto-lab-hawk](https://systemslibrarian.github.io/crypto-lab-hawk/) — HAWK lattice signatures with Gaussian sampling.
+
 ## Tech
 
 Vite + TypeScript, zero runtime dependencies. `src/gf256.ts` implements GF(2^8) arithmetic with the AES reduction polynomial; `src/uov.ts` is a complete UOV keygen / sign / verify; `src/ui.ts` is the interactive playground. Dark mode by default with a persisted theme toggle.
 
 ```bash
-npm install
-npm run dev      # local dev server
 npm run build    # type-check + production build to dist/
 ```
 
 ---
 
-"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31
+*One of 60+ browser demos in the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
+
+*"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
