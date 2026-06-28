@@ -1228,6 +1228,18 @@ function renderFooter(): HTMLElement {
       ·
       <a href="https://github.com/systemslibrarian?tab=repositories&q=crypto-lab" rel="noopener noreferrer">Other crypto-lab projects</a>
     </p>
+    <p class="footer-links">
+      Related demos:
+      <a href="https://systemslibrarian.github.io/crypto-lab-dilithium-seal/" rel="noopener noreferrer">crypto-lab-dilithium-seal</a>
+      ·
+      <a href="https://systemslibrarian.github.io/crypto-lab-falcon-seal/" rel="noopener noreferrer">crypto-lab-falcon-seal</a>
+      ·
+      <a href="https://systemslibrarian.github.io/crypto-lab-sphincs-ledger/" rel="noopener noreferrer">crypto-lab-sphincs-ledger</a>
+      ·
+      <a href="https://systemslibrarian.github.io/crypto-lab-mpcith-sign/" rel="noopener noreferrer">crypto-lab-mpcith-sign</a>
+      ·
+      <a href="https://systemslibrarian.github.io/crypto-lab-hawk/" rel="noopener noreferrer">crypto-lab-hawk</a>
+    </p>
     <p class="scripture">“So whether you eat or drink or whatever you do, do it all for the glory of God.” — 1 Corinthians 10:31</p>
   `;
 	return footer;
