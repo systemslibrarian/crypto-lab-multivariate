@@ -54,7 +54,7 @@ function byteGrid(
 		.map((b, i) => {
 			const isTamper = options.tamperedIndex === i;
 			const tooltip = `Byte ${i + 1}: ${hex(b)}${isTamper ? ' · tampered' : ''}`;
-			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}; --idx: ${i}" aria-label="${tooltip}" data-tooltip="${tooltip}" tabindex="-1">
+			return `<span class="byte-cell${isTamper ? ' byte-cell--tampered' : ''}" style="--byte-color: ${byteColor(b)}; --idx: ${i}" role="img" aria-label="${tooltip}" data-tooltip="${tooltip}" tabindex="-1">
 				<span class="byte-cell__hex" aria-hidden="true">${hex(b)}</span>
 			</span>`;
 		})
@@ -577,7 +577,7 @@ function renderPlayground(): HTMLElement {
 					`The signer secretly knows: the polynomial has a <strong>missing region</strong>. Wherever both inputs are "oil", the math is forced to zero. Once you pick random vinegar values, the puzzle deflates into ordinary linear algebra — instantly solvable.`,
 				)}</p>
         <p id="collapse-caption" class="collapse-caption" hidden aria-live="polite"></p>
-        <div class="anatomy-scroller">
+        <div class="anatomy-scroller" tabindex="0" role="group" aria-label="Coefficient matrix, horizontally scrollable">
           <div id="anatomy-matrix" class="anatomy-matrix-host"></div>
         </div>
         <div id="linear-system" class="linear-system-host" hidden></div>

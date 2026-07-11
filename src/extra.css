@@ -984,12 +984,11 @@
   border: 1px solid color-mix(in oklab, var(--accent) 36%, transparent);
 }
 .anatomy-cell--vo {
+  /* --mono-block-bg is a dark surface in BOTH themes, so the ink must stay
+     light in both — a dark ink here fails contrast in the light theme. */
   background: color-mix(in oklab, var(--accent-3) 26%, var(--mono-block-bg));
-  color: #1a1408;
-  border: 1px solid color-mix(in oklab, var(--accent-3) 40%, transparent);
-}
-[data-theme='dark'] .anatomy-cell--vo {
   color: #fff7e2;
+  border: 1px solid color-mix(in oklab, var(--accent-3) 40%, transparent);
 }
 .anatomy-cell--oo {
   background: color-mix(in oklab, var(--accent-2) 18%, var(--mono-block-bg));
