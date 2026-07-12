@@ -30,8 +30,25 @@ export interface UovKeys {
 	P: Quad[]; // public map = F composed with S
 }
 
-function rngByte(): number {
-	return Math.floor(Math.random() * 256);
+// Random-byte source. Defaults to a cryptographically-strong CSPRNG
+// (crypto.getRandomValues) so key material and vinegar guesses are drawn from
+// WebCrypto, consistent with the sibling crypto-lab demos. The source is
+// pluggable via setRngByte() so unit tests can pin a deterministic stream and
+// assert exact key/signature vectors.
+function defaultRngByte(): number {
+	const b = new Uint8Array(1);
+	crypto.getRandomValues(b);
+	return b[0];
+}
+
+let rngByte: () => number = defaultRngByte;
+
+// Override the byte source (e.g. a seeded PRNG in tests). Returns the previous
+// source so callers can restore it. Pass no argument to reset to the CSPRNG.
+export function setRngByte(fn?: () => number): () => number {
+	const prev = rngByte;
+	rngByte = fn ?? defaultRngByte;
+	return prev;
 }
 
 // --- linear algebra over GF(256) ------------------------------------------

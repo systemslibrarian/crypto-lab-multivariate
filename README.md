@@ -53,11 +53,20 @@ npm run dev
 
 ## Tech
 
-Vite + TypeScript, zero runtime dependencies. `src/gf256.ts` implements GF(2^8) arithmetic with the AES reduction polynomial; `src/uov.ts` is a complete UOV keygen / sign / verify; `src/ui.ts` is the interactive playground. Dark mode by default with a persisted theme toggle.
+Vite + TypeScript, zero runtime dependencies. `src/gf256.ts` implements GF(2^8) arithmetic with the AES reduction polynomial; `src/uov.ts` is a complete UOV keygen / sign / verify; `src/ui.ts` is the interactive playground. Key material and vinegar guesses are drawn from `crypto.getRandomValues` (WebCrypto CSPRNG); the RNG is injectable (`setRngByte`) so the test suite can pin deterministic vectors. The message-to-target map is a disclosed, non-cryptographic FNV-1a digest (called out both in the code and in the UI), used only to produce an `o`-byte target while keeping the demo offline and synchronous — real UOV hashes with a standard collision-resistant function.
 
 ```bash
 npm run build    # type-check + production build to dist/
+npm test         # crypto unit tests (vitest): GF(256) KATs + UOV round-trip / forgery-rejection
+npm run test:a11y  # axe-core WCAG A/AA gate (Playwright)
 ```
+
+## Tests
+
+`npm test` runs the vitest suite (Playwright e2e specs are excluded):
+
+- **`src/gf256.test.ts`** — GF(2^8) known-answer tests against FIPS-197 reference products (`{57}·{83} = {c1}`, etc.), plus field axioms: commutativity, associativity, distributivity, `a·inv(a) = 1` for every nonzero element.
+- **`src/uov.test.ts`** — verifies the trapdoor structure (zero oil×oil block), that `S·Sinv = I`, that the public map really is `F∘S`, sign/verify round-trips across parameter sets, and that verification **rejects** a flipped signature byte, an edited message, an all-zero forgery, and a signature from a different key.
 
 ---
 

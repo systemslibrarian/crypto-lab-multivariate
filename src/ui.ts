@@ -467,6 +467,10 @@ function renderPlayground(): HTMLElement {
 					'The message hashes to an o-byte target the signature must hit.',
 					'Your message gets squashed into a short fingerprint. The signature has to land exactly here.',
 				)}</p>
+        <p class="panel-caveat">${dual(
+					'Teaching hash: the message is mapped with a short non-cryptographic FNV-1a digest, not SHA-256. It only produces an o-byte target so the demo stays offline and synchronous — real UOV uses a standard collision-resistant hash.',
+					'Heads up: the "hash" here is a tiny toy (FNV-1a), not a real secure hash like SHA-256. It just turns your message into the right number of bytes for the demo.',
+				)}</p>
         <div class="byte-grid-wrap">
           <div id="target-byte-grid" class="byte-grid-host" aria-live="polite"></div>
           ${copyButton('target-byte-grid', 'Copy target hash hex')}

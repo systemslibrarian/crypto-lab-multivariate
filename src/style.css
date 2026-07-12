@@ -426,9 +426,17 @@ button:disabled {
 .section-footnote,
 .math-decimal,
 .info-panel p,
-.field-help {
+.field-help,
+.panel-caveat {
   color: var(--ink-soft);
   line-height: 1.65;
+}
+
+.panel-caveat {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--ink-soft);
+  font-size: 0.9rem;
 }
 
 .panel-copy,
