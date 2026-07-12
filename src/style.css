@@ -254,15 +254,6 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.hero-panel h1 {
-  margin: 0;
-  font-size: clamp(2.4rem, 7vw, 5rem);
-  line-height: 0.96;
-  letter-spacing: -0.02em;
-  color: var(--ink-strong);
-  font-weight: 700;
-}
-
 .hero-amp {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text;
@@ -271,6 +262,20 @@ button:disabled {
   font-style: italic;
   padding: 0 0.05em;
 }
+
+/* BEGIN cl-hero standard — managed, keep in sync across fleet */
+/* Theme mapping for this lab: --text -> --ink-strong, --text-dim -> --ink-soft,
+   --border -> --line. --accent already exists. */
+.cl-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:clamp(1rem,4vw,3rem);flex-wrap:wrap;margin:clamp(1rem,3vw,2rem) 0 1.5rem;}
+.cl-hero-main{flex:1 1 22rem;min-width:min(100%,20rem);}
+.cl-hero-title{margin:0;font-size:clamp(1.6rem,3.8vw,2.7rem);font-weight:700;line-height:1.1;letter-spacing:.01em;color:var(--ink-strong);}
+.cl-hero-sub{margin:.4rem 0 0;font-size:clamp(.9rem,1.6vw,1.05rem);letter-spacing:.01em;opacity:.85;color:var(--ink-strong);}
+.cl-hero-desc{margin:.55rem 0 0;font-size:1rem;line-height:1.5;color:var(--ink-soft);max-width:60ch;}
+.cl-hero-why{flex:0 1 min(40%,26rem);min-width:min(100%,15rem);border:1px solid var(--line);border-radius:10px;padding:.85rem 1.05rem;background:color-mix(in oklab,var(--accent) 6%,transparent);}
+.cl-hero-why-label{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;color:var(--accent);}
+.cl-hero-why-text{margin:.35rem 0 0;font-size:.95rem;line-height:1.5;color:var(--ink-strong);}
+@media (max-width:640px){.cl-hero{flex-direction:column;}.cl-hero-why{flex-basis:auto;width:100%;}}
+/* END cl-hero standard */
 
 .hero-text {
   max-width: 64ch;
@@ -1034,9 +1039,6 @@ a:focus-visible,
 }
 
 @media (max-width: 420px) {
-  .hero-panel h1 {
-    font-size: clamp(2rem, 11vw, 3rem);
-  }
   .hero-toolbar {
     justify-content: space-between;
   }

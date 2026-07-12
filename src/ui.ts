@@ -295,20 +295,23 @@ function renderHero(): HTMLElement {
       </div>
     </div>
     <div class="hero-copy">
-      <p class="eyebrow">Post-Quantum · Multivariate</p>
-      <h1>Oil <span class="hero-amp" aria-hidden="true">&amp;</span><span class="sr-only">and</span> Vinegar</h1>
-      <p class="hero-lede">${dual(
-				`Sign a message with a real post-quantum scheme — then watch the secret shortcut turn a
-				hard algebra problem into a one-step solve.`,
-				`Sign a message with real post-quantum math, then watch the secret shortcut deflate
-				the puzzle into ordinary algebra.`,
-			)}</p>
-      <p class="hero-text hero-text--subtle">${dual(
-				`This is Unbalanced Oil-and-Vinegar (UOV) over GF(256), running entirely in your browser.
-				Keys, signing, verification, and the 2022 attack that broke Rainbow — all visualized.`,
-				`The whole thing — keys, signature, the 2022 break — runs in your browser. No
-				servers, no fake animation.`,
-			)}</p>
+      <header class="cl-hero">
+        <div class="cl-hero-main">
+          <h1 class="cl-hero-title">Oil <span class="hero-amp" aria-hidden="true">&amp;</span><span class="sr-only">and</span> Vinegar</h1>
+          <p class="cl-hero-sub">UOV · Multivariate PQC · GF(256)</p>
+          <p class="cl-hero-desc">${dual(
+						`Sign a message with a real Unbalanced Oil-and-Vinegar scheme in your browser and watch the secret oil×oil-zero trapdoor collapse the hard nonlinear system into a one-step linear solve.`,
+						`Sign a message with real post-quantum math in your browser, then watch the secret shortcut deflate the puzzle into ordinary algebra.`,
+					)}</p>
+        </div>
+        <aside class="cl-hero-why" aria-label="Why it matters">
+          <span class="cl-hero-why-label">WHY IT MATTERS</span>
+          <p class="cl-hero-why-text">${dual(
+						`Multivariate schemes give the shortest post-quantum signatures, but their trapdoors keep falling to structural attacks — Rainbow broke on a laptop in 2022. Seeing why shows why NIST leaned on less-structured lattices instead.`,
+						`These are the smallest post-quantum signatures, great for tiny devices — but the secret shortcut keeps turning out to be guessable, and Rainbow broke in 2022. That is why the standards bodies picked sturdier lattice math.`,
+					)}</p>
+        </aside>
+      </header>
       <div class="hero-actions">
         <button id="tour-start" class="action-button action-button--small" type="button" aria-keyshortcuts="d">
           <span aria-hidden="true">✨</span> Run 60-sec demo
@@ -320,19 +323,6 @@ function renderHero(): HTMLElement {
           How Rainbow fell
         </a>
       </div>
-      <details class="why-details">
-        <summary>${dual('Why study a broken family?', 'Why care about a system that broke?')}</summary>
-        <p>${dual(
-					`Multivariate schemes produce the shortest signatures of any post-quantum family, yet
-					their trapdoors keep falling to structural attacks. Understanding exactly how Rainbow
-					broke is the clearest way to see why NIST chose less-structured lattice assumptions for
-					its primary standards.`,
-					`These signatures are the smallest of the bunch — which is great for tiny devices.
-					But the secret-shortcut keeps turning out to be guessable. Watching exactly how
-					that happened in 2022 shows why the standards bodies picked a different, sturdier
-					math problem (lattices) for the official replacements.`,
-				)}</p>
-      </details>
     </div>
     <aside class="hero-metric-card" aria-label="How the trapdoor works">
       <p class="hero-metric-label">The MQ trapdoor</p>

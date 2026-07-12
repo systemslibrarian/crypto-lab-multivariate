@@ -1637,18 +1637,11 @@
 [data-audience='on'] {
   font-size: 1.12em;
 }
-[data-audience='on'] .hero-panel h1 {
-  font-size: clamp(3rem, 9vw, 6rem);
-}
-[data-audience='on'] .hero-lede {
-  font-size: clamp(1.25rem, 2vw, 1.6rem);
-}
-[data-audience='on'] .hero-text--subtle {
-  display: none;
+[data-audience='on'] .cl-hero-desc {
+  font-size: clamp(1.1rem, 1.8vw, 1.35rem);
 }
 [data-audience='on'] .kbd-hint,
 [data-audience='on'] .preset-chip__params,
-[data-audience='on'] .why-details,
 [data-audience='on'] .field-help,
 [data-audience='on'] .table-hint,
 [data-audience='on'] .scripture {
@@ -2015,7 +2008,7 @@
     color: #000 !important;
     background: #f4f4f4 !important;
   }
-  .hero-panel h1 {
+  .cl-hero-title {
     font-size: 2.2rem !important;
   }
   .trapdoor-svg {
