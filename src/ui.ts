@@ -2087,7 +2087,7 @@ function openResultCard(data: ResultCardData): void {
 				<button type="button" class="ghost-button ghost-button--small" data-action="copy-text"><span aria-hidden="true">📋</span> Copy summary</button>
 				<button type="button" class="ghost-button ghost-button--small" data-action="copy-link"><span aria-hidden="true">🔗</span> Copy permalink</button>
 			</div>
-			<p class="result-modal__note">Educational only — these are toy parameters. Real UOV uses ~256-byte signatures and ~278 KB public keys.</p>
+			<p class="result-modal__note">Educational only — these are toy parameters. Real UOV, at the ov-Ip parameter set in NIST&rsquo;s additional-signatures on-ramp, uses 128-byte signatures and a 278,432-byte (≈272 KB) public key.</p>
 		</div>
 	`;
 	document.body.appendChild(modal);

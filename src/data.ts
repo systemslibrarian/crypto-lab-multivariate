@@ -22,7 +22,7 @@ export const SCHEMES: MvScheme[] = [
 		name: 'UOV (Unbalanced Oil & Vinegar)',
 		status: 'research',
 		year: '1999',
-		pubKey: '~278 KB',
+		pubKey: '~272 KB',
 		signature: '128 B',
 		note: 'The original single-layer scheme that Rainbow generalised. Without Rainbow\u2019s extra layer structure, UOV avoids the specific weakness Beullens exploited and remains a NIST on-ramp candidate.',
 	},
@@ -60,11 +60,11 @@ export const BEULLENS_STORY: AttackStep[] = [
 	},
 	{
 		title: 'Beullens found the oil subspace faster',
-		body: 'In 2022, Ward Beullens introduced new "rectangular MinRank" and intersection attacks that recovered the hidden oil subspace from the public key far faster than expected — exploiting precisely the layered structure Rainbow relied on.',
+		body: 'In "Improved Cryptanalysis of UOV and Rainbow" (Eurocrypt 2021) Ward Beullens introduced the intersection attack, which applies to UOV and Rainbow alike, and the rectangular MinRank attack, which applies only to Rainbow — both recovering the hidden oil subspace from the public key far faster than expected by exploiting the layered structure Rainbow relied on. Those attacks cut the cost of key recovery sharply but did not finish Rainbow off; the following year he did.',
 	},
 	{
 		title: 'Key recovery on a laptop',
-		body: 'For the NIST Level-I parameter set, the attack recovered the private key in roughly a weekend of computation on a standard laptop, well under the claimed security level. NIST did not standardise Rainbow.',
+		body: 'The kill was a separate, later result: "Breaking Rainbow Takes a Weekend on a Laptop" (Crypto 2022), the so-called simple attack. For the NIST Level-I parameter set it recovered the private key in roughly a weekend of computation on a standard laptop, well under the claimed security level. NIST did not standardise Rainbow.',
 	},
 	{
 		title: 'Why lattices won',
@@ -129,9 +129,14 @@ export const SIG_COMPARE: SigCompare[] = [
 	},
 	{
 		family: 'Multivariate',
-		scheme: 'UOV',
-		pubKey: '278 KB',
-		pubKeyBytes: 284600,
+		scheme: 'UOV (ov-Ip)',
+		// NIST on-ramp parameter set ov-Ip: (n, m, q) = (112, 44, 256), so the
+		// public key is m·n(n+1)/2 = 44 × 6328 = 278,432 bytes. That is 272 KiB,
+		// not 278 KiB — the earlier '278 KB' label was the byte count's leading
+		// digits mistaken for kilobytes, and pubKeyBytes had been back-computed
+		// from it as 278 × 1024.
+		pubKey: '272 KB',
+		pubKeyBytes: 278432,
 		sig: '128 B',
 		sigBytes: 128,
 		feel: 'pubkey ≈ 2 phone photos · sig fits in 1 tweet',
@@ -184,6 +189,13 @@ export const CITATIONS: Citation[] = [
 		note: 'Introduced UOV — the scheme this lab implements.',
 	},
 	{
+		label: 'Beullens 2021',
+		title: 'Improved Cryptanalysis of UOV and Rainbow',
+		venue: 'EUROCRYPT 2021',
+		href: 'https://eprint.iacr.org/2020/1343',
+		note: 'Introduced the intersection attack (UOV and Rainbow) and the rectangular MinRank attack (Rainbow only).',
+	},
+	{
 		label: 'Beullens 2022',
 		title: 'Breaking Rainbow Takes a Weekend on a Laptop',
 		venue: 'CRYPTO 2022',
@@ -213,7 +225,7 @@ export const PRESETS: Preset[] = [
 		emoji: '◆',
 		v: 6,
 		o: 3,
-		caption: 'Balanced teaching parameters. The standard way to start.',
+		caption: 'Default teaching parameters: v = 6, o = 3 — unbalanced (v > o), as UOV requires. The standard way to start.',
 	},
 	{
 		id: 'tiny',

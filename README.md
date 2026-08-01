@@ -16,7 +16,7 @@ A hands-on demonstration of multivariate cryptography, the post-quantum family w
 
 **[systemslibrarian.github.io/crypto-lab-multivariate](https://systemslibrarian.github.io/crypto-lab-multivariate/)**
 
-Pick the number of vinegar and oil variables, generate a keypair, and sign a message. The signing panel shows the random vinegar guess, the solved oil values, and the resulting signature, plus how many guesses were needed before a solvable linear system appeared. Three verification cards let you confirm a valid signature, flip a single signature byte, and edit the message — the last two are rejected, showing the signature is bound to both the key and the message. Below the playground, a five-step walkthrough explains the Beullens 2022 attack, a lineage of Oil-and-Vinegar schemes, and a table comparing signature sizes across the lattice, hash, and multivariate families.
+Pick the number of vinegar and oil variables, generate a keypair, and sign a message. The signing panel shows the random vinegar guess, the solved oil values, and the resulting signature, plus how many guesses were needed before a solvable linear system appeared. Three verification cards let you confirm a valid signature, flip a single signature byte, and edit the message — the last two are rejected, showing the signature is bound to both the key and the message. Below the playground, a five-step walkthrough explains the Beullens attacks on Rainbow — the intersection and rectangular MinRank attacks of Eurocrypt 2021, then the simple attack of Crypto 2022 that finished it — a lineage of Oil-and-Vinegar schemes, and a table comparing signature sizes across the lattice, hash, and multivariate families.
 
 ## What Can Go Wrong
 
