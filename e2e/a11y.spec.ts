@@ -34,6 +34,15 @@ async function revealAll(page: Page): Promise<void> {
   await page.waitForTimeout(50);
 }
 
+/**
+ * The attack exhibit only renders its stage list, verdicts and byte grids after
+ * a run, so revealAll() alone never puts that markup in front of axe. Drive it.
+ */
+async function runForgeAttack(page: Page): Promise<void> {
+  await page.locator('#forge-btn').click();
+  await expect(page.locator('.forge-card')).toHaveCount(2, { timeout: 120000 });
+}
+
 async function scan(page: Page): Promise<void> {
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   const summary = results.violations.map((v) => ({
@@ -47,6 +56,7 @@ async function scan(page: Page): Promise<void> {
 
 test('no WCAG A/AA violations in dark theme', async ({ page }) => {
   await page.goto('.');
+  await runForgeAttack(page);
   await revealAll(page);
   await scan(page);
 });
@@ -62,6 +72,7 @@ test('no WCAG A/AA violations in light theme', async ({ page }) => {
   await page.goto('.');
   await page.locator('#cl-theme-toggle').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await runForgeAttack(page);
   await revealAll(page);
   await scan(page);
 });

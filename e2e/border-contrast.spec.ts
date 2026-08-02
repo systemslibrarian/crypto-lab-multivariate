@@ -28,8 +28,9 @@ for (const theme of ['light', 'dark'] as const) {
       document.documentElement.dataset.theme = nextTheme;
     }, theme);
 
+    // v, o, polynomial picker, and the attack exhibit's balanced-size picker.
     const controls = page.locator('.param-row select, .poly-select-label select');
-    await expect(controls).toHaveCount(3);
+    await expect(controls).toHaveCount(4);
 
     const styles = await controls.evaluateAll((elements) =>
       elements.map((element) => {

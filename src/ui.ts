@@ -1,5 +1,6 @@
 // ui.ts — Multivariate cryptography lab UI.
 import { keygen, sign, verify, hashMessage, evalMap, type UovKeys, type SignTrace, type Quad } from './uov.ts';
+import { kipnisShamirAttack, publicPartOf, type AttackResult } from './attack.ts';
 import {
 	SCHEMES,
 	BEULLENS_STORY,
@@ -362,11 +363,117 @@ function renderSectionNav(): HTMLElement {
 		<div class="section-nav__inner">
 			<a href="#playground-heading" data-section="playground"><span aria-hidden="true">▶</span> Live demo</a>
 			<a href="#attack-heading" data-section="attack"><span aria-hidden="true">⚡</span> The break</a>
+			<a href="#forge-heading" data-section="forge"><span aria-hidden="true">⚔</span> Break it yourself</a>
 			<a href="#schemes-heading" data-section="schemes"><span aria-hidden="true">▤</span> Lineage</a>
 			<a href="#compare-heading" data-section="compare"><span aria-hidden="true">▥</span> Compare</a>
 		</div>
 	`;
 	return nav;
+}
+
+/**
+ * Captions for the quadratic → linear collapse, counted off THIS keypair and
+ * THIS signature rather than written in advance.
+ *
+ * The exhibit used to print four fixed sentences describing what the animation
+ * ought to be showing. Everything they described — how many coefficients sit in
+ * each region, what the vinegar×vinegar terms collapse to, what the solved
+ * system actually was — is something the run already has in hand, so it is
+ * reported instead of asserted. The one genuinely structural claim ("the O×O
+ * region is zero") is now a measured count, contrasted against the same block
+ * in the PUBLIC key, where it is emphatically not zero.
+ */
+function collapsePhases(
+	keys: UovKeys | null,
+	trace: SignTrace | null,
+	k: number,
+): { cls: string; caption: string }[] {
+	if (!keys) {
+		return [
+			{ cls: 'phase-1', caption: '1 · Generate a keypair to count this map’s coefficients.' },
+			{ cls: 'phase-2', caption: '2 · Generate a keypair to count this map’s coefficients.' },
+			{ cls: 'phase-3', caption: '3 · Generate a keypair to count this map’s coefficients.' },
+			{ cls: 'phase-4', caption: '4 · Generate a keypair to count this map’s coefficients.' },
+		];
+	}
+	const { v, o } = keys.params;
+	const n = keys.n;
+	const idx = Math.min(Math.max(k, 0), o - 1);
+	const Q = keys.F[idx];
+	const Ppub = keys.P[idx];
+	let vv = 0;
+	let vo = 0;
+	let oo = 0;
+	let ooPublic = 0;
+	for (let i = 0; i < n; i++)
+		for (let j = i; j < n; j++) {
+			const bothOil = i >= v && j >= v;
+			const bothVin = i < v && j < v;
+			if (Q[i][j] !== 0) {
+				if (bothVin) vv++;
+				else if (bothOil) oo++;
+				else vo++;
+			}
+			if (bothOil && Ppub[i][j] !== 0) ooPublic++;
+		}
+	const ooTotal = (o * (o + 1)) / 2;
+
+	// The vinegar×vinegar terms collapse to exactly one constant, and the demo
+	// already knows it: rhs = target + constant, so constant = rhs + target.
+	const constTerm = trace ? (trace.rhs[idx] ^ trace.target[idx]) & 0xff : null;
+	const row = trace ? trace.A[idx] : null;
+	const solvedOk = trace
+		? trace.A.every((r, ri) => {
+				let acc = 0;
+				for (let c = 0; c < o; c++) acc = gf256Mac(acc, r[c], trace.oil[c]);
+				return acc === trace.rhs[ri];
+			})
+		: false;
+
+	const runNote = trace ? '' : ' (sign a message to see this run’s values)';
+	return [
+		{
+			cls: 'phase-1',
+			caption: `1 · Fix vinegar. Polynomial #${idx + 1} has ${vv} nonzero blue V×V coefficient${vv === 1 ? '' : 's'}; with this run’s vinegar they collapse to the single constant ${
+				constTerm === null ? '—' : '0x' + constTerm.toString(16).padStart(2, '0')
+			}${runNote}.`,
+		},
+		{
+			cls: 'phase-2',
+			caption: `2 · ${vo} nonzero gold V×O coefficient${vo === 1 ? '' : 's'} each multiply one known byte by one unknown, folding into the ${o} linear coefficients ${
+				row ? '[' + row.map((b) => b.toString(16).padStart(2, '0')).join(' ') + ']' : '—'
+			}${runNote}.`,
+		},
+		{
+			cls: 'phase-3',
+			caption: `3 · Counted, not claimed: the red O×O region of the secret polynomial holds ${oo} nonzero coefficients out of ${ooTotal} slots. The same block of the PUBLIC polynomial holds ${ooPublic} — the linear map S refills it, which is what hides the trapdoor.`,
+		},
+		{
+			cls: 'phase-4',
+			caption: `4 · What is left is a ${o}×${o} system A · oil = rhs. ${
+				trace
+					? `Gaussian elimination returned oil = [${trace.oil
+							.map((b) => b.toString(16).padStart(2, '0'))
+							.join(' ')}] after ${trace.attempts} vinegar guess${trace.attempts === 1 ? '' : 'es'}, and recomputing A · oil ${solvedOk ? 'reproduces rhs exactly' : 'does NOT reproduce rhs'}.`
+					: 'Sign a message to watch it solved.'
+			}`,
+		},
+	];
+}
+
+/** acc + a·b in GF(256), used only to re-check the solved system. */
+function gf256Mac(acc: number, a: number, b: number): number {
+	let p = 0;
+	let x = a;
+	let y = b;
+	for (let i = 0; i < 8; i++) {
+		if (y & 1) p ^= x;
+		const hi = x & 0x80;
+		x = (x << 1) & 0xff;
+		if (hi) x ^= 0x1b;
+		y >>= 1;
+	}
+	return (acc ^ p) & 0xff;
 }
 
 function renderPlayground(): HTMLElement {
@@ -645,32 +752,10 @@ function renderPlayground(): HTMLElement {
 		collapseBtn.disabled = true;
 
 		caption.hidden = false;
-		const phases: { cls: string; caption: string; wait: number }[] = [
-			{
-				cls: 'phase-1',
-				caption:
-					'1 · Fix vinegar. The blue V×V coefficients now multiply two known bytes — they collapse into constants.',
-				wait: reduced ? 250 : 1100,
-			},
-			{
-				cls: 'phase-2',
-				caption:
-					'2 · The gold V×O coefficients multiply one known × one unknown. Each one becomes a linear coefficient of oil.',
-				wait: reduced ? 250 : 1100,
-			},
-			{
-				cls: 'phase-3',
-				caption:
-					'3 · The red O×O region was already zero — that is the trapdoor structure baked into the central map.',
-				wait: reduced ? 250 : 1100,
-			},
-			{
-				cls: 'phase-4',
-				caption:
-					'4 · What is left is an o×o linear system A · oil = rhs. Gaussian-eliminate and signing is done.',
-				wait: reduced ? 250 : 1400,
-			},
-		];
+		const phases = collapsePhases(keys, trace, parseInt(polySelect.value, 10) || 0).map((ph) => ({
+			...ph,
+			wait: reduced ? 250 : ph.cls === 'phase-4' ? 1400 : 1100,
+		}));
 
 		for (const phase of phases) {
 			matrix.classList.remove('phase-1', 'phase-2', 'phase-3', 'phase-4');
@@ -1086,6 +1171,124 @@ function renderAttack(): HTMLElement {
       <span>Rainbow is broken and was not standardised by NIST. The UOV scheme above uses tiny teaching parameters and is for education only — never use either for real signatures.</span>
     </div>
   `;
+	return section;
+}
+
+/**
+ * Exhibit: cause a break, rather than read about one.
+ *
+ * "How Rainbow Fell" is a story. This runs a real Kipnis–Shamir key recovery
+ * against a real keypair generated in this browser, from the public key only,
+ * and hands the resulting forged signature to the lab's own verifier. It then
+ * runs the identical code against unbalanced parameters — same oil count, more
+ * vinegar — so the defence the page keeps claiming for v > o is measured too,
+ * not asserted.
+ */
+function renderForgeAttack(): HTMLElement {
+	const section = el('section', 'lab-section');
+	section.id = 'forge';
+	section.setAttribute('aria-labelledby', 'forge-heading');
+	section.innerHTML = `
+    <div class="section-heading-row">
+      <div>
+        <p class="section-kicker">Break it yourself</p>
+        <h2 id="forge-heading">Recover the Trapdoor and Forge a Signature</h2>
+        <p class="section-footnote">Kipnis &amp; Shamir, &ldquo;Cryptanalysis of the Oil and Vinegar Signature Scheme&rdquo; (CRYPTO 1998) — the result that killed <em>balanced</em> Oil-and-Vinegar and forced the &ldquo;unbalanced&rdquo; v &gt; o variant this lab signs with.</p>
+      </div>
+    </div>
+    <p class="panel-copy">${dual(
+			`Everything above is the signer's view. This runs the attacker's: a fresh keypair is generated, the attack is handed <strong>only the public key</strong>, and it tries to recover the hidden oil subspace and forge a signature. The same code then runs against unbalanced parameters with the same oil count, so you can watch the defence work.`,
+			`So far you have been the signer. Now be the attacker: this makes a fresh key, gives the attack only the <strong>public</strong> half, and sees whether it can fake a signature. Then it tries the same thing on the safer settings.`,
+		)}</p>
+    <div class="warning-banner" role="note">
+      <span class="warning-banner__icon" aria-hidden="true">⚠️</span>
+      <span id="forge-scale">Toy scale, stated plainly: this runs over GF(256) at <strong>v = o = 3 or 4</strong>, i.e. 6 or 8 variables total. A deployed UOV parameter set is <strong>(v, o) = (68, 44)</strong> — 112 variables. Nothing here scales to that. The point being demonstrated is that the <em>structure</em> leaks, not that these numbers are large.</span>
+    </div>
+    <div class="param-row" role="group" aria-label="Attack parameters">
+      <label for="forge-m">
+        <span class="param-row__name">Balanced size (v = o)</span>
+        <select id="forge-m"><option selected>3</option><option>4</option></select>
+      </label>
+      <button id="forge-btn" class="action-button" type="button">
+        <span aria-hidden="true">⚡</span> <span>Run the attack</span>
+      </button>
+    </div>
+    <div id="forge-out" class="forge-out" aria-live="polite">
+      <p class="trace-empty">No attack run yet. Press <strong>Run the attack</strong> to generate a keypair and try to break it with the public key alone.</p>
+    </div>
+  `;
+
+	const $ = (id: string) => section.querySelector('#' + id) as HTMLElement;
+	const btn = $('forge-btn') as HTMLButtonElement;
+	const msel = $('forge-m') as HTMLSelectElement;
+	const out = $('forge-out');
+
+	const stageList = (res: AttackResult): string =>
+		res.stages
+			.map(
+				(st) => `<li class="forge-stage ${st.ok ? 'forge-stage--ok' : 'forge-stage--bad'}">
+        <span class="forge-stage__mark" aria-hidden="true">${st.ok ? '✓' : '✗'}</span>
+        <span class="forge-stage__body"><strong>${st.name}</strong><br />${st.detail}</span>
+      </li>`,
+			)
+			.join('');
+
+	const card = (title: string, res: AttackResult, note: string): string => {
+		const verdict = res.succeeded
+			? `<p class="forge-verdict forge-verdict--broken" data-forge-verdict="broken"><strong>BROKEN.</strong> The lab's own verifier accepted a signature produced without the private key, in ${fmtMs(res.elapsedMs)}.</p>`
+			: `<p class="forge-verdict forge-verdict--held" data-forge-verdict="held"><strong>HELD.</strong> The attack recovered ${res.recoveredDim} of the ${res.o} dimensions it needed and produced no forgery, after ${fmtMs(res.elapsedMs)}.</p>`;
+		const forged = res.forgery
+			? `<div class="byte-grid-wrap">${byteGrid(res.forgery, { label: 'Forged signature', id: title.startsWith('Balanced') ? 'forge-sig-balanced' : 'forge-sig-unbalanced' })}</div>`
+			: '';
+		const oil = res.oilBasis.length
+			? `<div class="byte-grid-wrap">${byteGrid(res.oilBasis[0], { label: 'First recovered oil basis vector' })}</div>`
+			: '';
+		return `<article class="panel-card forge-card" data-forge-case="${res.balanced ? 'balanced' : 'unbalanced'}">
+      <div class="panel-header"><h3>${title}</h3></div>
+      <p class="panel-copy">v = ${res.v}, o = ${res.o}, n = ${res.n} over GF(256). ${note}</p>
+      <ol class="forge-stages" role="list">${stageList(res)}</ol>
+      ${verdict}
+      ${oil}
+      ${forged}
+    </article>`;
+	};
+
+	btn.addEventListener('click', () => {
+		const m = parseInt(msel.value, 10) || 3;
+		btn.disabled = true;
+		out.innerHTML = '<p class="trace-empty">Generating keys and running the attack…</p>';
+		// Yield once so the "running" state paints before the synchronous work.
+		window.setTimeout(() => {
+			const balancedKeys = keygen({ v: m, o: m });
+			const balancedTarget = hashMessage('forge me', m);
+			const balanced = kipnisShamirAttack(
+				publicPartOf(balancedKeys),
+				balancedTarget,
+				(sig) => verify(balancedKeys, balancedTarget, sig),
+			);
+
+			const unbalancedKeys = keygen({ v: m + 2, o: m });
+			const unbalancedTarget = hashMessage('forge me', m);
+			const unbalanced = kipnisShamirAttack(
+				publicPartOf(unbalancedKeys),
+				unbalancedTarget,
+				(sig) => verify(unbalancedKeys, unbalancedTarget, sig),
+			);
+
+			out.innerHTML = `<div class="forge-grid">
+        ${card('Balanced Oil-and-Vinegar', balanced, 'The 1997 parameters — equal oil and vinegar.')}
+        ${card('Unbalanced, same oil count', unbalanced, 'Identical attack, identical oil count, two extra vinegar variables.')}
+      </div>
+      <p class="section-footnote">Both runs used the same function on the same kind of input; the only difference is the vinegar count. Every number above was measured during this run, including the verifier verdicts.</p>`;
+			announce(
+				balanced.succeeded
+					? 'Attack finished: the balanced key was broken and a forged signature verified.'
+					: 'Attack finished: the balanced key was not broken on this run.',
+			);
+			btn.disabled = false;
+		}, 0);
+	});
+
 	return section;
 }
 
@@ -2195,11 +2398,12 @@ export function mountApp(root: HTMLDivElement): void {
 	const nav = renderSectionNav();
 	const playground = renderPlayground();
 	const attack = renderAttack();
+	const forge = renderForgeAttack();
 	const citations = renderCitations();
 	const schemes = renderSchemes();
 	const compare = renderCompare();
 	const footer = renderFooter();
-	main.append(hero, nav, playground, attack, citations, schemes, compare, footer);
+	main.append(hero, nav, playground, attack, forge, citations, schemes, compare, footer);
 	root.appendChild(main);
 	const backToTop = renderBackToTop();
 	document.body.appendChild(backToTop);
@@ -2209,7 +2413,7 @@ export function mountApp(root: HTMLDivElement): void {
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
 	wireShareButton();
-	wireSectionNavObserver(nav, [playground, attack, schemes, compare]);
+	wireSectionNavObserver(nav, [playground, attack, forge, schemes, compare]);
 	wireScrollReveal(main);
 	wireBackToTop(backToTop);
 	wireTextModeToggle();

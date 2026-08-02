@@ -2015,3 +2015,63 @@
     max-height: 180px;
   }
 }
+
+
+/* ============================================================
+   Break-it-yourself attack exhibit
+   ============================================================ */
+
+.forge-out {
+	margin-top: 1rem;
+}
+
+.forge-grid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
+.forge-stages {
+	list-style: none;
+	margin: 0.75rem 0 0;
+	padding: 0;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.forge-stage {
+	display: flex;
+	gap: 0.55rem;
+	align-items: flex-start;
+	font-size: 0.86rem;
+	line-height: 1.45;
+	padding: 0.5rem 0.65rem;
+	border-radius: 8px;
+	border-left: 4px solid var(--line-strong);
+	background: color-mix(in oklab, var(--accent) 5%, transparent);
+}
+
+.forge-stage--ok {
+	border-left-color: var(--accent-4);
+}
+
+.forge-stage--bad {
+	border-left-color: var(--accent-2);
+}
+
+.forge-stage__mark {
+	font-weight: 700;
+}
+
+.forge-stage--ok .forge-stage__mark {
+	color: var(--accent-4);
+}
+
+.forge-stage--bad .forge-stage__mark {
+	color: var(--accent-2);
+}
+
+.forge-verdict {
+	margin-top: 0.75rem;
+	font-size: 0.9rem;
+}
