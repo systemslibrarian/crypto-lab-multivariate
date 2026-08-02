@@ -124,7 +124,7 @@ export const SIG_COMPARE: SigCompare[] = [
 		pubKeyBytes: 161600,
 		sig: '66 B',
 		sigBytes: 66,
-		feel: 'pubkey ≈ a phone photo · sig fits in 2 tweets',
+		feel: 'pubkey ≈ a phone photo · 66-byte signature',
 		status: 'broken',
 	},
 	{
@@ -139,7 +139,7 @@ export const SIG_COMPARE: SigCompare[] = [
 		pubKeyBytes: 278432,
 		sig: '128 B',
 		sigBytes: 128,
-		feel: 'pubkey ≈ 2 phone photos · sig fits in 1 tweet',
+		feel: 'pubkey ≈ 2 phone photos · 128-byte signature',
 		status: 'research',
 	},
 ];
@@ -242,7 +242,7 @@ export const PRESETS: Preset[] = [
 		emoji: '▦',
 		v: 8,
 		o: 4,
-		caption: 'Larger parameters — keygen slows visibly, signatures stay tiny.',
+		caption: 'Larger toy parameters — compare the measured keygen time; signatures stay tiny.',
 	},
 	{
 		id: 'forgery',

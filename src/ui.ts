@@ -314,7 +314,7 @@ function renderHero(): HTMLElement {
       </header>
       <div class="hero-actions">
         <button id="tour-start" class="action-button action-button--small" type="button" aria-keyshortcuts="d">
-          <span aria-hidden="true">✨</span> Run 60-sec demo
+          <span aria-hidden="true">✨</span> Run ${Math.round(TOUR_STEPS.reduce((sum, step) => sum + step.duration, 0) / 1000)}-sec demo
         </button>
         <a class="ghost-button ghost-button--small" href="#playground-heading">
           <span aria-hidden="true">▶</span> Try it yourself
@@ -336,7 +336,7 @@ function renderHero(): HTMLElement {
       <div class="shortcuts-panel__inner">
         <h2 class="shortcuts-panel__title">Keyboard shortcuts</h2>
         <ul>
-          <li><kbd>D</kbd> Run guided 60-second demo</li>
+          <li><kbd>D</kbd> Run the guided ${Math.round(TOUR_STEPS.reduce((sum, step) => sum + step.duration, 0) / 1000)}-second demo</li>
           <li><kbd>G</kbd> Generate new keypair</li>
           <li><kbd>S</kbd> Sign current message</li>
           <li><kbd>V</kbd> Verify as-is</li>
@@ -531,7 +531,7 @@ function renderPlayground(): HTMLElement {
               <span class="scenario-card__icon" aria-hidden="true">⚡</span>
             </div>
             <p class="scenario-copy">${dual(
-							'Flip a single byte in the signature.',
+							'Invert every bit in one signature byte.',
 							"Change one tiny byte in the signature — should fail.",
 						)}</p>
             <button id="verify-bad" class="ghost-button" type="button" disabled>${dual('Flip one byte &amp; verify', 'Flip a byte')}</button>
@@ -983,7 +983,7 @@ function renderPlayground(): HTMLElement {
 		const bad = trace.signature.slice();
 		const tamperedIdx = Math.floor(Math.random() * bad.length);
 		const originalByte = bad[tamperedIdx];
-		bad[tamperedIdx] = (bad[tamperedIdx] ^ 0x01) & 0xff;
+		bad[tamperedIdx] = (bad[tamperedIdx] ^ 0xff) & 0xff;
 		const ok = withVerifyTime(() => verify(keys!, target, bad));
 		$('verify-bad-detail').innerHTML = `
 			<p class="scenario-detail__caption">Byte ${tamperedIdx + 1} flipped: ${hex(originalByte)} → ${hex(bad[tamperedIdx])}</p>
@@ -1868,7 +1868,7 @@ function renderScoreboard(): HTMLElement {
 	board.innerHTML = `
 		<div class="scoreboard__header">
 			<span class="scoreboard__kicker">Now playing</span>
-			<span class="scoreboard__status">Research</span>
+			<span class="scoreboard__status" id="sb-status">—</span>
 		</div>
 		<div class="scoreboard__scheme" id="sb-scheme">UOV —</div>
 		<dl class="scoreboard__stats">
@@ -1888,6 +1888,7 @@ function wireScoreboard(): void {
 	const sig = document.getElementById('sb-sig');
 	const pk = document.getElementById('sb-pk');
 	const time = document.getElementById('sb-time');
+	const status = document.getElementById('sb-status');
 	const fmtBytes = (n: number): string => {
 		if (n < 1024) return `${Math.round(n)} B`;
 		if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -1902,6 +1903,7 @@ function wireScoreboard(): void {
 		if (sig) sig.textContent = fmtBytes(detail.sigBytes);
 		if (pk) pk.textContent = fmtBytes(detail.pkBytes);
 		if (time) time.textContent = detail.lastSignMs == null ? '—' : fmtMsShort(detail.lastSignMs);
+		if (status) status.textContent = 'UOV research candidate';
 	}) as EventListener);
 }
 

@@ -65,3 +65,13 @@ test('no WCAG A/AA violations in light theme', async ({ page }) => {
   await revealAll(page);
   await scan(page);
 });
+
+test('claim labels match the live tour, comparison, preset, and scoreboard', async ({ page }) => {
+  await page.goto('.');
+  await expect(page.locator('#tour-start')).toContainText('32-sec demo');
+  await expect(page.locator('body')).not.toContainText(/fits in \d+ tweets/);
+  await expect(page.locator('body')).not.toContainText('keygen slows visibly');
+  await page.locator('#keygen-btn').click();
+  await expect(page.locator('#sb-status')).toHaveText('UOV research candidate');
+  await expect(page.locator('#verify-bad')).toContainText('Flip one byte');
+});
