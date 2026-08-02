@@ -4,6 +4,7 @@
   --ink-soft: #524563;
   --line: rgba(33, 26, 43, 0.14);
   --line-strong: rgba(33, 26, 43, 0.22);
+  --control-border: #756878;
   --panel: rgba(255, 252, 248, 0.86);
   --panel-strong: rgba(255, 255, 255, 0.94);
   --accent: #0b6f96;
@@ -50,6 +51,7 @@
   --ink-soft: #b3a8c4;
   --line: rgba(200, 190, 220, 0.16);
   --line-strong: rgba(200, 190, 220, 0.26);
+  --control-border: #82768f;
   --panel: rgba(30, 26, 38, 0.88);
   --panel-strong: rgba(38, 33, 48, 0.94);
   --accent: #5ccff8;

@@ -57,7 +57,7 @@
   padding: 10px 14px;
   min-height: 44px;
   border-radius: 12px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--control-border);
   background: var(--input-bg);
   color: var(--ink-strong);
   font-family: var(--mono);
@@ -1057,7 +1057,7 @@
   padding: 8px 12px;
   min-height: 40px;
   border-radius: 10px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--control-border);
   background: var(--input-bg);
   color: var(--ink-strong);
   font-family: var(--mono);
