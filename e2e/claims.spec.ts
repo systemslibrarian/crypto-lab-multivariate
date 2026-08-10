@@ -97,3 +97,36 @@ test('the Kipnis–Shamir exhibit breaks balanced parameters and fails on unbala
 	await expect(unbalanced.locator('.forge-stage--bad')).toHaveCount(1);
 	await expect(unbalanced.locator('#forge-sig-unbalanced')).toHaveCount(0);
 });
+
+/* ── Every element this page hides must actually hide ─────────────────────
+ * `[hidden] { display: none }` is a UA rule whose attribute selector has the
+ * same specificity (0,1,0) as a class, so any later `.foo { display: … }` beats
+ * it. `.ghost-button { display: flex }` did, and #audience-toggle is one of the
+ * elements this page sets `hidden` on — so hiding it would have left a
+ * clickable control on screen.
+ *
+ * A first-paint check cannot catch this: #audience-toggle is NOT hidden at
+ * first paint. So the assertion is the general property — set `hidden` on each
+ * hide target in turn and require it to disappear — rather than a snapshot of
+ * whatever happens to be hidden right now.
+ */
+test('setting hidden actually hides, on every element the page hides', async ({ page }) => {
+  await page.goto('.');
+
+  const leaked = await page.evaluate(() => {
+    const targets = ['audience-toggle', 'proto-verdict', 'quiz-result', 'setup-verdict'];
+    const out: Array<{ id: string; display: string }> = [];
+    for (const id of targets) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const had = el.hasAttribute('hidden');
+      el.setAttribute('hidden', '');
+      const display = getComputedStyle(el).display;
+      if (!had) el.removeAttribute('hidden');
+      if (display !== 'none') out.push({ id, display });
+    }
+    return out;
+  });
+
+  expect(leaked, 'hidden was set but these still compute a display').toEqual([]);
+});

@@ -80,6 +80,18 @@
   box-sizing: border-box;
 }
 
+/* The `hidden` attribute must actually hide.
+   The UA rule is `[hidden] { display: none }` — an attribute selector, whose
+   specificity (0,1,0) is exactly a class's, so `.ghost-button { display: flex }`
+   outranks it. `#audience-toggle` is a hide target, so the code could set
+   `hidden` on it and leave a clickable control on screen. It is not hidden at
+   first paint, which is why a first-paint-only check could not see this.
+   `!important` is load-bearing: without it the next `display` on a hideable
+   class silently wins again. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 96px;
