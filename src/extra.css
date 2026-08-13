@@ -22,7 +22,7 @@
 }
 .maturity-chip.scenario-status--pending {
   background: color-mix(in oklab, var(--accent) 18%, transparent);
-  color: var(--accent);
+  color: var(--accent-ink);
   border-color: color-mix(in oklab, var(--accent) 28%, transparent);
 }
 .maturity-chip.scenario-status--invalid {
@@ -307,7 +307,10 @@
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  /* --ink, not --ink-soft. The pill's own `color-mix(--accent 10%)` fill lifts
+     the surface out of the range --ink-soft was chosen against: it measured
+     4.37:1 there in the dark theme, against 6.94:1 for --ink. */
+  color: var(--ink);
   font-weight: 700;
 }
 .timing-pill__value {
@@ -410,7 +413,7 @@
   height: 2.85rem;
   min-width: 44px;
   min-height: 44px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--control-border);
   border-radius: 50%;
   background: var(--panel-strong);
   color: var(--ink-strong);
@@ -711,9 +714,12 @@
   white-space: nowrap;
 }
 .text-mode-toggle[aria-pressed='true'] {
+  /* Same as .preset-chip.is-active: pressing the toggle used to dissolve its own
+     boundary, first with a 32% accent mix (1.85-2.99:1) and then, with the
+     neutral token, against its own tinted fill (2.59:1). */
   background: color-mix(in oklab, var(--accent) 18%, var(--panel-strong));
-  border-color: color-mix(in oklab, var(--accent) 32%, transparent);
-  color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 @media (max-width: 520px) {
   .text-mode-toggle__label {
@@ -809,7 +815,7 @@
   z-index: 25;
   width: 48px;
   height: 48px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--control-border);
   border-radius: 50%;
   background: var(--mono-block-bg);
   color: var(--mono-block-fg);
@@ -918,6 +924,33 @@
   grid-column: 1 / -1;
 }
 
+/* THE ALWAYS-DARK PANELS.
+   .hero-metric-card paints --metric-bg, and .anatomy-matrix / .ls-matrix /
+   .ls-vector paint --mono-block-bg. All four are near-black in BOTH themes, so
+   every token used inside them has to be the ink the DARK theme defines — a
+   light-theme --ink-strong or --accent-2 lands near-black on near-black.
+   That was live and invisible to every oracle: the four `.trapdoor-svg` labels
+   measured 1.03:1, 2.18:1 and 2.61:1 in the light theme (the figure explaining
+   the whole trapdoor, unreadable), and the dashed border marking the oil x oil
+   region — the exhibit's one non-colour cue — measured 1.62:1 against its own
+   cell. The SVG is `aria-hidden` and a border is not text, so axe skipped one
+   and the arithmetic walk skipped both; they were measured from the
+   compositor's own pixels.
+   Overriding the tokens once, here, is the fix rather than patching each rule:
+   the next ink added inside these panels inherits the right palette by default. */
+.hero-metric-card,
+.anatomy-matrix,
+.ls-matrix,
+.ls-vector {
+  --ink-strong: #f4f1f9;
+  --ink: #dcd6e8;
+  --ink-soft: #b3a8c4;
+  --accent: #5ccff8;
+  --accent-2: #ff7c7c;
+  --accent-3: #f0c95a;
+  --accent-4: #4adfca;
+}
+
 /* ---- trapdoor anatomy matrix ---- */
 .anatomy-scroller {
   margin-top: 16px;
@@ -930,7 +963,14 @@
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
-.anatomy-matrix-host {
+/* NOT on the host. The host holds the matrix AND the .anatomy-legend, whose
+   three sentences of prose then could never wrap: `min-width: max-content` gave
+   the host a 1210px min-content, which propagated out of the (non-flex,
+   non-grid) .anatomy-scroller to .panel-card--full and pushed the whole
+   document to a 1284px scrollWidth inside a 380px viewport. `body {
+   overflow-x: hidden }` had been making that unfalsifiable. The MATRIX is what
+   must not squash; the legend must wrap like any other paragraph. */
+.anatomy-matrix {
   min-width: max-content;
 }
 .anatomy-empty {
@@ -944,7 +984,14 @@
 .anatomy-matrix {
   display: grid;
   gap: 3px;
-  background: color-mix(in oklab, var(--mono-block-bg) 30%, transparent);
+  /* SOLID --mono-block-bg, not 30% of it over whatever is behind. Every cell in
+     here already composites over --mono-block-bg and carries a light ink; the
+     gaps and the axis headers were the only parts sitting on the translucent
+     mix, which lands DARK in the dark theme and LIGHT in the light one. That
+     split is what stranded the axis labels: --accent measured 2.89:1 there and
+     --accent-3 measured 1.26:1, in the light theme only. One surface, one set of
+     inks — the same shape .ls-matrix already uses. */
+  background: var(--mono-block-bg);
   padding: 10px;
   border-radius: 14px;
   border: 1px solid var(--line);
@@ -965,14 +1012,22 @@
 .anatomy-header,
 .anatomy-rowhead {
   background: transparent;
-  color: var(--ink-soft);
+  /* Fixed light inks, like the cells beside them and for the same reason: this
+     panel is dark in BOTH themes. These labels are `aria-hidden` — they are
+     axis ticks, and the matrix carries a full aria-label of its own — which
+     means BOTH the arithmetic contrast walk and axe skip them, by design. They
+     are still visible text under SC 1.4.3, so they were measured by hand from
+     the compositor's own pixels: 10.9:1 both, in the light theme where they
+     failed, and 12.3:1 in dark — against 2.89:1 and 1.26:1 before. Both still
+     clear 9.2:1 under the `filter` that .anatomy-matrix.phase-4 applies. */
+  color: #cfc7dd;
   font-size: 0.65rem;
 }
 .anatomy-header--v {
-  color: var(--accent);
+  color: #7fd8ff;
 }
 .anatomy-header--o {
-  color: var(--accent-3);
+  color: #f0c95a;
 }
 .anatomy-cell {
   color: var(--ink-strong);
@@ -991,13 +1046,19 @@
   border: 1px solid color-mix(in oklab, var(--accent-3) 40%, transparent);
 }
 .anatomy-cell--oo {
+  /* The hue that was left out. --vv and --vo both carry an explicit light ink
+     under a note saying --mono-block-bg is dark in BOTH themes; --oo alone kept
+     var(--accent-2), a DARK red in the light theme — 1.80:1 on this cell. And
+     this is the cell the whole trapdoor argument is about. */
   background: color-mix(in oklab, var(--accent-2) 18%, var(--mono-block-bg));
   border: 1.5px dashed color-mix(in oklab, var(--accent-2) 60%, transparent);
-  color: var(--accent-2);
+  color: #ffc9c9;
 }
 .anatomy-cell--oo .anatomy-cell__zero {
+  /* No `opacity` here. It compounded with the ink above to 3.84:1 in dark and
+     de-emphasised the one glyph this exhibit exists to show. The smaller
+     font-size already carries the emphasis difference. */
   font-size: 0.8rem;
-  opacity: 0.7;
 }
 .anatomy-cell--blank {
   background: transparent;
@@ -1128,11 +1189,12 @@
   color: var(--mono-block-fg);
 }
 .ls-cell--oil {
+  /* --mono-block-bg is a dark surface in BOTH themes, so the ink must stay
+     light in both — exactly the note already on .anatomy-cell--vo. The light
+     theme painted #1a1408 here and measured 1.95:1; axe caught it too, on the
+     three cells holding the solved oil bytes. */
   background: color-mix(in oklab, var(--accent-3) 35%, var(--mono-block-bg));
-  color: #1a1408;
-}
-[data-theme='dark'] .ls-cell--oil {
-  color: #fff;
+  color: #fff7e2;
 }
 .ls-cell--rhs {
   background: color-mix(in oklab, var(--accent-4) 30%, var(--mono-block-bg));
@@ -1279,7 +1341,7 @@
   gap: 10px;
   padding: 12px 16px;
   min-height: 44px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--control-border);
   border-radius: 14px;
   background: var(--panel-strong);
   color: var(--ink-strong);
@@ -1294,9 +1356,13 @@
   border-color: color-mix(in oklab, var(--accent) 30%, transparent);
 }
 .preset-chip.is-active {
+  /* The tinted fill moves the surface toward --control-border, so the neutral
+     edge drops to 1.48-2.59:1 here even though it clears 3:1 on the unselected
+     chip. The accent at full strength is the delineator that survives its own
+     tint: 4.3:1 against this fill in light and 6.0:1 in dark. */
   background: color-mix(in oklab, var(--accent) 18%, var(--panel-strong));
-  border-color: color-mix(in oklab, var(--accent) 50%, transparent);
-  color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 .preset-chip__icon {
   font-size: 1.1rem;
@@ -1387,7 +1453,13 @@
 .tour-caption__actions .ghost-button {
   background: color-mix(in oklab, var(--mono-block-bg) 50%, transparent);
   color: var(--mono-block-fg);
-  border-color: color-mix(in oklab, var(--mono-block-fg) 22%, transparent);
+  /* --control-border, not 22% of the caption's own ink over the caption. The
+     latter measured 1.74:1 and 1.94:1 against these buttons' own fill — the
+     three controls that DRIVE the guided tour, dissolving into the bar they sit
+     on. This is the same token every other control on the page uses; it is a
+     fixed colour, so it stays legible on the always-dark caption in both
+     themes. */
+  border-color: var(--control-border);
 }
 
 @keyframes tour-caption-in {
@@ -1433,11 +1505,16 @@
   }
 }
 
-/* during tour, slightly hide back-to-top and first-visit pulse so they don't compete */
-.is-tour-running .back-to-top,
+/* During the tour the back-to-top button is taken out of the way entirely
+   rather than faded. `opacity: 0.4` on an ENABLED control is not an inactive-
+   component exemption under WCAG — it just takes the contrast down with it, and
+   the tour runs for 32 seconds. Same reasoning as the scoreboard below. */
+.is-tour-running .back-to-top {
+  animation: none;
+  display: none;
+}
 .is-tour-running.is-first-visit #keygen-btn {
   animation: none;
-  opacity: 0.4;
 }
 
 /* ---- result card modal ---- */
@@ -1685,7 +1762,7 @@
 }
 .audience-toggle[aria-pressed='true'] {
   background: color-mix(in oklab, var(--accent-4) 18%, var(--panel-strong));
-  border-color: color-mix(in oklab, var(--accent-4) 40%, transparent);
+  border-color: var(--accent-4);
   color: var(--accent-4);
 }
 @media (max-width: 520px) {
@@ -1891,7 +1968,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   background: color-mix(in oklab, var(--accent) 18%, transparent);
-  color: var(--accent);
+  color: var(--accent-ink);
   border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
 }
 .scoreboard__scheme {
@@ -1956,11 +2033,15 @@
     right: calc(env(safe-area-inset-right, 0px) + 18px);
   }
 }
-/* During tour / modal, dim the scoreboard so it doesn't fight for attention */
+/* During tour / modal the scoreboard is not offered, so it is removed rather
+   than faded. At `opacity: 0.4` every one of its seven readouts measured
+   between 1.71:1 and 3.46:1 — a fixed panel of live numbers, still on screen,
+   still in the accessibility tree, and unreadable. Opacity de-emphasis
+   compounds and carries no exemption; `display: none` is the honest form of
+   "not now". */
 .is-tour-running .scoreboard,
 .is-modal-open .scoreboard {
-  opacity: 0.4;
-  pointer-events: none;
+  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .scoreboard {

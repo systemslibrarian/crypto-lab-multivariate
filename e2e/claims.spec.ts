@@ -130,3 +130,18 @@ test('setting hidden actually hides, on every element the page hides', async ({ 
 
   expect(leaked, 'hidden was set but these still compute a display').toEqual([]);
 });
+
+/**
+ * Moved here from `e2e/a11y.spec.ts` when that file was replaced by the WCAG
+ * gate. It is a claims test, not an accessibility one, and it was the only
+ * thing in the old spec worth keeping.
+ */
+test('claim labels match the live tour, comparison, preset, and scoreboard', async ({ page }) => {
+  await page.goto('.');
+  await expect(page.locator('#tour-start')).toContainText('32-sec demo');
+  await expect(page.locator('body')).not.toContainText(/fits in \d+ tweets/);
+  await expect(page.locator('body')).not.toContainText('keygen slows visibly');
+  await page.locator('#keygen-btn').click();
+  await expect(page.locator('#sb-status')).toHaveText('UOV research candidate');
+  await expect(page.locator('#verify-bad')).toContainText('Flip one byte');
+});

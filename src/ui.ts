@@ -164,7 +164,7 @@ function renderLinearSystem(trace: SignTrace): string {
 	const o = trace.A.length;
 	const colSize = `clamp(28px, calc((100vw - 200px) / ${o + 2}), 44px)`;
 	const aMatrix = (() => {
-		let h = `<div class="ls-matrix" style="grid-template-columns: repeat(${o}, ${colSize});" aria-label="Coefficient matrix A">`;
+		let h = `<div class="ls-matrix" role="group" style="grid-template-columns: repeat(${o}, ${colSize});" aria-label="Coefficient matrix A">`;
 		for (let i = 0; i < o; i++) {
 			for (let j = 0; j < o; j++) {
 				h += `<span class="ls-cell ls-cell--A">${hex(trace.A[i][j])}</span>`;
@@ -174,7 +174,7 @@ function renderLinearSystem(trace: SignTrace): string {
 		return h;
 	})();
 	const vector = (cls: 'oil' | 'rhs', values: number[]) => {
-		let h = `<div class="ls-vector ls-vector--${cls}" style="grid-template-columns: ${colSize};" aria-label="${cls === 'oil' ? 'Oil variables (solved)' : 'Right-hand side'}">`;
+		let h = `<div class="ls-vector ls-vector--${cls}" role="group" style="grid-template-columns: ${colSize};" aria-label="${cls === 'oil' ? 'Oil variables (solved)' : 'Right-hand side'}">`;
 		for (const val of values) {
 			h += `<span class="ls-cell ls-cell--${cls}">${hex(val)}</span>`;
 		}
@@ -333,7 +333,7 @@ function renderHero(): HTMLElement {
 				'Looks impossible · easy with the secret',
 			)}</p>
     </aside>
-    <div id="shortcuts-panel" class="shortcuts-panel" aria-label="Keyboard shortcuts" hidden>
+    <div id="shortcuts-panel" class="shortcuts-panel" role="group" aria-label="Keyboard shortcuts" hidden>
       <div class="shortcuts-panel__inner">
         <h2 class="shortcuts-panel__title">Keyboard shortcuts</h2>
         <ul>
@@ -511,7 +511,7 @@ function renderPlayground(): HTMLElement {
     <p id="preset-caption" class="preset-caption" role="status" aria-live="polite"></p>
 
     <div class="playground-grid">
-      <div class="panel-card panel-card--wide" aria-labelledby="step-1-heading">
+      <div class="panel-card panel-card--wide" role="group" aria-labelledby="step-1-heading">
         <div class="panel-header">
           <h3 id="step-1-heading"><span class="step-num" aria-hidden="true">1</span> ${dual('Message &amp; parameters', 'Pick a message')}</h3>
           <button id="reset-btn" class="ghost-button ghost-button--small" type="button" title="Reset playground to defaults">
@@ -556,7 +556,7 @@ function renderPlayground(): HTMLElement {
         </div>
       </div>
 
-      <div class="panel-card" aria-labelledby="step-2-heading">
+      <div class="panel-card" role="group" aria-labelledby="step-2-heading">
         <div class="panel-header">
           <h3 id="step-2-heading"><span class="step-num" aria-hidden="true">2</span> ${dual('Message hash (target)', 'Message → target')}</h3>
         </div>
@@ -574,7 +574,7 @@ function renderPlayground(): HTMLElement {
         </div>
       </div>
 
-      <div class="panel-card" aria-labelledby="step-3-heading">
+      <div class="panel-card" role="group" aria-labelledby="step-3-heading">
         <div class="panel-header">
           <h3 id="step-3-heading"><span class="step-num" aria-hidden="true">3</span> Sign</h3>
         </div>
@@ -603,7 +603,7 @@ function renderPlayground(): HTMLElement {
         <div id="bench-result" class="bench-result" hidden></div>
       </div>
 
-      <div class="panel-card panel-card--wide" aria-labelledby="step-4-heading">
+      <div class="panel-card panel-card--wide" role="group" aria-labelledby="step-4-heading">
         <div class="panel-header">
           <h3 id="step-4-heading"><span class="step-num" aria-hidden="true">4</span> Verify</h3>
           <div class="panel-header__actions">
@@ -660,7 +660,7 @@ function renderPlayground(): HTMLElement {
         </ul>
       </div>
 
-      <div class="panel-card panel-card--full" aria-labelledby="step-5-heading">
+      <div class="panel-card panel-card--full" role="group" aria-labelledby="step-5-heading">
         <div class="panel-header">
           <h3 id="step-5-heading"><span class="step-num" aria-hidden="true">5</span> ${dual('Anatomy of the trapdoor', 'Why the secret shortcut works')}</h3>
           <div class="panel-header__actions">
@@ -1388,11 +1388,11 @@ function renderSchemes(): HTMLElement {
       <p class="panel-copy"><strong>${s.year}</strong></p>
       <dl class="math-summary-grid">
         <div>
-          <dt class="hero-metric-label">Public key</dt>
+          <dt class="stat-label">Public key</dt>
           <dd class="mono-inline">${s.pubKey}</dd>
         </div>
         <div>
-          <dt class="hero-metric-label">Signature</dt>
+          <dt class="stat-label">Signature</dt>
           <dd class="mono-inline">${s.signature}</dd>
         </div>
       </dl>
@@ -2276,10 +2276,10 @@ function openResultCard(data: ResultCardData): void {
 	modal.innerHTML = `
 		<div class="result-modal__backdrop" data-close></div>
 		<div class="result-modal__card" role="document">
-			<header class="result-modal__head">
+			<div class="result-modal__head">
 				<h2 id="result-modal-title">Your signature receipt</h2>
 				<button type="button" class="icon-button result-modal__close" data-close aria-label="Close result card">✕</button>
-			</header>
+			</div>
 			<canvas class="result-modal__preview" width="1080" height="608" aria-label="Result card preview"></canvas>
 			<dl class="result-modal__facts">
 				<div><dt>Message</dt><dd>${data.message.length > 70 ? data.message.slice(0, 67) + '…' : data.message}</dd></div>

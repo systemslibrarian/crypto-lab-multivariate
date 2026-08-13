@@ -5,6 +5,13 @@
   --line: rgba(33, 26, 43, 0.14);
   --line-strong: rgba(33, 26, 43, 0.22);
   --control-border: #756878;
+  /* --accent as INK, for the places it is painted ON an --accent-tinted chip
+     (.portfolio-badge, .maturity-chip, .scoreboard__status, .preset-chip
+     .is-active, the two pressed toggles). The tint darkens the surface under
+     it, so --accent itself lands at 4.20-4.37:1 there — clean against the page
+     and just under the floor against its own chip. #095f81 is 5.30:1 on the
+     darkest of those composites and 7.08:1 on white. */
+  --accent-ink: #095f81;
   --panel: rgba(255, 252, 248, 0.86);
   --panel-strong: rgba(255, 255, 255, 0.94);
   --accent: #0b6f96;
@@ -52,6 +59,9 @@
   --line: rgba(200, 190, 220, 0.16);
   --line-strong: rgba(200, 190, 220, 0.26);
   --control-border: #82768f;
+  /* The dark accent is already 8.9:1 on its own tinted chips; the token exists
+     so the ink is named once and the light override has somewhere to live. */
+  --accent-ink: var(--accent);
   --panel: rgba(30, 26, 38, 0.88);
   --panel-strong: rgba(38, 33, 48, 0.94);
   --accent: #5ccff8;
@@ -111,12 +121,17 @@ html {
   }
 }
 
+/* No `overflow-x: hidden` here, deliberately. On <body> it PROPAGATES to the
+   viewport, so `document.documentElement.scrollWidth` is pinned equal to
+   `clientWidth` and every WCAG 1.4.10 reflow question answers "fine" by
+   construction — including the one the e2e gate asks. It does not fix reflow;
+   it makes reflow unfalsifiable, and silently clips whatever was overflowing
+   instead. Whatever overflows is fixed at its source. */
 body {
   margin: 0;
   min-width: 280px;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: hidden;
 }
 
 .skip-link {
@@ -211,6 +226,20 @@ button:disabled {
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* Every one of these is a GRID ITEM, and a grid item's automatic minimum size
+   is its min-content — so one wide panel sizes the whole column and, through it,
+   the document. See the note on the tracks in the 760px block below.
+   Measured: this declaration and that one are EACH independently sufficient to
+   clear the 380px overflow — reverting either alone still passes the gate, and
+   only reverting both reproduces the 387px scrollWidth. They are both kept
+   because they close different mechanisms (a track's minimum vs an item's), and
+   the fact is recorded because a half-revert here would "prove" the reflow
+   oracle bites when it had not been tested at all. */
+.panel-card,
+.scenario-card {
+  min-width: 0;
+}
+
 .hero-panel {
   position: relative;
   display: grid;
@@ -246,7 +275,7 @@ button:disabled {
   padding: 10px 14px;
   border-radius: 999px;
   background: color-mix(in oklab, var(--accent) 14%, transparent);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-family: var(--mono);
   font-size: 0.84rem;
   font-weight: 500;
@@ -367,6 +396,21 @@ button:disabled {
   color: var(--metric-muted);
   line-height: 1.6;
   font-size: 0.92rem;
+}
+
+/* The same visual role as .hero-metric-label, on an ORDINARY panel.
+   .hero-metric-label paints --metric-muted, a near-white rgba that exists only
+   because .hero-metric-card is near-black in both themes. The scheme cards
+   reused that class on a translucent light --panel, where it measured 1.09:1 in
+   the light theme — near-white ink on a near-white card. A class is only safe
+   inside the container it was written for. */
+.stat-label {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .lab-section {
@@ -524,7 +568,11 @@ button:disabled {
 .ghost-button {
   background: var(--panel-strong);
   color: var(--ink-strong);
-  border: 1px solid var(--line-strong);
+  /* --control-border, not --line-strong. A ghost button is filled with
+     --panel-strong and sits on a --panel card 1.1:1 away, so this border is the
+     only thing that delineates it (SC 1.4.11). --line-strong is a SURFACE
+     divider and composited to 1.58:1 in light and 1.84:1 in dark. */
+  border: 1px solid var(--control-border);
 }
 
 .action-button:hover:not(:disabled),
@@ -620,7 +668,9 @@ a:focus-visible,
   min-height: 96px;
   margin-top: 8px;
   padding: 14px 16px;
-  border: 1px solid var(--line-strong);
+  /* The one control WCAG most obviously means by "boundary": a text field with
+     a near-panel fill. Was --line-strong, 1.58:1 light / 1.64:1 dark. */
+  border: 1px solid var(--control-border);
   border-radius: 16px;
   resize: vertical;
   background: var(--input-bg);
@@ -883,7 +933,7 @@ a:focus-visible,
   height: 2.85rem;
   min-width: 44px;
   min-height: 44px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--control-border);
   border-radius: 50%;
   background: var(--panel-strong);
   color: var(--ink-strong);
@@ -914,7 +964,10 @@ a:focus-visible,
   gap: 6px;
   padding: 8px 12px;
   min-height: 36px;
-  border: 1px solid color-mix(in oklab, var(--mono-block-fg) 22%, transparent);
+  /* 22% of the block's own ink over the block itself is a 1.47:1 edge. This
+     button floats over a dark code block in BOTH themes and has almost no fill
+     of its own, so the border is the whole of its boundary (SC 1.4.11). */
+  border: 1px solid var(--control-border);
   border-radius: 999px;
   background: color-mix(in oklab, var(--mono-block-bg) 80%, transparent);
   color: var(--mono-block-fg);
@@ -931,7 +984,10 @@ a:focus-visible,
 }
 .copy-button.is-copied {
   background: var(--accent-4);
-  color: #fff;
+  /* --accent-4 is a bright mint in the dark theme, where #fff on it measured
+     1.65:1 — and axe caught it too. --accent-fg is the ink each theme already
+     defines for a saturated fill. */
+  color: var(--accent-fg);
   border-color: var(--accent-4);
 }
 .copy-button__label {
@@ -1011,7 +1067,15 @@ a:focus-visible,
   .reuse-grid,
   .math-summary-grid,
   .scenario-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr), not a bare 1fr. A bare `1fr` is `minmax(auto, 1fr)`, and
+       `auto` as a track MINIMUM is the min-content of the widest item in it —
+       which here is the coefficient matrix, ~313px at v=6,o=3 and more at v=8.
+       An `overflow-x: auto` scroller does NOT zero that: overflow only clears
+       the AUTOMATIC MINIMUM SIZE of a flex or grid ITEM, and .anatomy-scroller
+       is an ordinary block inside the card. Paired with `min-width: 0` on the
+       cards below, this is what lets the track shrink to the viewport and the
+       matrix scroll inside its own box instead of pushing the document. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .panel-card--wide {
