@@ -77,10 +77,12 @@ function announce(msg: string): void {
 	});
 }
 
-function statusChip(s: 'broken' | 'research' | 'historical' | 'standardized'): string {
+function statusChip(s: 'broken' | 'research' | 'historical' | 'selected' | 'standardized'): string {
 	const map: Record<string, [string, string]> = {
 		broken: ['scenario-status--invalid', 'Broken'],
 		research: ['scenario-status--pending', 'Research'],
+		// Selected by NIST but not yet published as a standard — Falcon/FN-DSA.
+		selected: ['scenario-status--pending', 'Selected, not yet standardized'],
 		historical: ['scenario-status--pending', 'Historical'],
 		standardized: ['scenario-status--valid', 'Standardized'],
 	};

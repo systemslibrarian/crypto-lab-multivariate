@@ -88,7 +88,7 @@ export interface SigCompare {
 	 */
 	sigNote?: string;
 	feel: string;
-	status: 'standardized' | 'research' | 'broken';
+	status: 'standardized' | 'selected' | 'research' | 'broken';
 }
 
 // "feel" gives a non-expert reader a visceral sense of scale: small text
@@ -113,7 +113,14 @@ export const SIG_COMPARE: SigCompare[] = [
 		sigBytes: 666,
 		sigNote: 'padded; raw ~652–657, variable',
 		feel: 'sig ≈ a tweet',
-		status: 'standardized',
+		// NOT 'standardized'. FALCON was SELECTED in 2022 and is to be published
+		// as FIPS 206 (FN-DSA), which NIST's own project page still lists as
+		// "in development" — there is no draft, let alone a final standard, and
+		// FIPS 206 does not appear in the CSRC FIPS publications list at all.
+		// Only FIPS 203/204/205 were finalised (2024-08-13).
+		// https://csrc.nist.gov/projects/post-quantum-cryptography/post-quantum-cryptography-standardization
+		// Verified against CSRC 2026-09-29.
+		status: 'selected',
 	},
 	{
 		family: 'Hash',
