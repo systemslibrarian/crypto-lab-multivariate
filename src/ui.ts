@@ -1311,7 +1311,7 @@ function renderCompare(): HTMLElement {
         <span class="size-bar size-bar--pk" style="--pct: ${pkPct}%" aria-hidden="true"></span>
       </td>
       <td class="mono-cell size-cell" data-label="Signature">
-        <span class="size-cell__value">${r.sig}</span>
+        <span class="size-cell__value"${r.sigNote ? ` title="${r.sigNote}"` : ''}>${r.sig}</span>${r.sigNote ? `<span class="size-cell__note">${r.sigNote}</span>` : ''}
         <span class="size-bar size-bar--sig" style="--pct: ${sigPct}%" aria-hidden="true"></span>
       </td>
       <td data-label="Feels like" class="feel-cell">${r.feel}</td>

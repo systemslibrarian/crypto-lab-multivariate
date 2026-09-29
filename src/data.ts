@@ -80,6 +80,13 @@ export interface SigCompare {
 	pubKeyBytes: number;
 	sig: string;
 	sigBytes: number;
+	/**
+	 * Set ONLY where sigBytes is not a fixed length. Falcon is the one such row:
+	 * its signatures are variable-length, so sigBytes carries the PADDED constant
+	 * the spec tables quote and this records the raw range. Every other row's
+	 * signature size is exact and leaves this undefined.
+	 */
+	sigNote?: string;
 	feel: string;
 	status: 'standardized' | 'research' | 'broken';
 }
@@ -102,8 +109,9 @@ export const SIG_COMPARE: SigCompare[] = [
 		scheme: 'Falcon-512',
 		pubKey: '897 B',
 		pubKeyBytes: 897,
-		sig: '666 B',
+		sig: '≈666 B',
 		sigBytes: 666,
+		sigNote: 'padded; raw ~652–657, variable',
 		feel: 'sig ≈ a tweet',
 		status: 'standardized',
 	},

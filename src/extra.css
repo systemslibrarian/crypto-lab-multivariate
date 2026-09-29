@@ -1271,6 +1271,19 @@
   display: inline-block;
   font-weight: 700;
 }
+/* Falcon's signature size is the padded constant, not a fixed length; the note
+   says so under the figure. .size-cell is nowrap, so this re-enables wrapping
+   or the caveat would widen the column. */
+.size-cell__note {
+  display: block;
+  margin-top: 2px;
+  max-width: 22ch;
+  white-space: normal;
+  font-weight: 400;
+  font-size: 0.78em;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
 .size-bar {
   display: block;
   margin-top: 8px;
