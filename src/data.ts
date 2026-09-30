@@ -111,7 +111,7 @@ export const SIG_COMPARE: SigCompare[] = [
 		pubKeyBytes: 897,
 		sig: '≈666 B',
 		sigBytes: 666,
-		sigNote: 'padded; raw ~652–657, variable',
+		sigNote: 'padded; raw is variable, 647–664 B over 20,000 signatures',
 		feel: 'sig ≈ a tweet',
 		// NOT 'standardized'. FALCON was SELECTED in 2022 and is to be published
 		// as FIPS 206 (FN-DSA), which NIST's own project page still lists as
