@@ -306,12 +306,13 @@ function renderHero(): HTMLElement {
 						`Sign a message with a real Unbalanced Oil-and-Vinegar scheme in your browser and watch the secret oil×oil-zero trapdoor collapse the hard nonlinear system into a one-step linear solve.`,
 						`Sign a message with real post-quantum math in your browser, then watch the secret shortcut deflate the puzzle into ordinary algebra.`,
 					)}</p>
+          <p class="cl-hero-desc"><strong>Teaching parameters and a non-cryptographic FNV-1a message hash — not production signatures or a post-quantum security claim.</strong></p>
         </div>
         <aside class="cl-hero-why" aria-label="Why it matters">
           <span class="cl-hero-why-label">WHY IT MATTERS</span>
           <p class="cl-hero-why-text">${dual(
-						`Multivariate schemes give the shortest post-quantum signatures, but their trapdoors keep falling to structural attacks — Rainbow broke on a laptop in 2022. Seeing why shows why NIST leaned on less-structured lattices instead.`,
-						`These are the smallest post-quantum signatures, great for tiny devices — but the secret shortcut keeps turning out to be guessable, and Rainbow broke in 2022. That is why the standards bodies picked sturdier lattice math.`,
+						`Multivariate schemes can offer short signatures, but their algebraic trapdoors need careful analysis. Rainbow's structural break shows why compact output alone is not evidence of security.`,
+						`Short signatures can hide large public keys and weaknesses in the secret shortcut. Rainbow broke in 2022; understanding why helps you judge more than the signature size.`,
 					)}</p>
         </aside>
       </header>
