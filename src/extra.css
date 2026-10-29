@@ -2169,3 +2169,23 @@
 	margin-top: 0.75rem;
 	font-size: 0.9rem;
 }
+
+/* The book glyph is drawn here rather than as DOM text. axe 4.14's
+   label-content-name-mismatch (WCAG 2.5.3 Label in Name) compares a control's
+   accessible name against what a SIGHTED user sees, and it excludes
+   aria-hidden content from the NAME while still counting it as visible. So an
+   aria-hidden glyph inside a button can never satisfy the rule. CSS generated
+   content is not DOM text, so it is outside the comparison entirely. */
+.text-mode-toggle::before {
+  content: "\01F4D6";
+  margin-right: 0.35rem;
+}
+
+.audience-toggle::before {
+  content: "\01F3A4";
+  margin-right: 0.35rem;
+}
+
+.result-modal__close::before {
+  content: "\2715";
+}

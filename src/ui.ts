@@ -274,16 +274,14 @@ function renderHero(): HTMLElement {
 	hero.setAttribute('role', 'banner');
 	hero.innerHTML = `
     <div class="hero-toolbar">
-      <a class="portfolio-badge" href="https://github.com/systemslibrarian?tab=repositories&q=crypto-lab" aria-label="View other crypto-lab projects on GitHub">
+      <a class="portfolio-badge" href="https://github.com/systemslibrarian?tab=repositories&q=crypto-lab" aria-label="crypto-lab portfolio: view other crypto-lab projects on GitHub">
         <span aria-hidden="true">⚙</span> crypto-lab · portfolio
       </a>
       <div class="hero-toolbar__right">
-        <button id="text-mode-toggle" class="ghost-button ghost-button--small text-mode-toggle" type="button" aria-pressed="false" aria-label="Toggle plain English explanations">
-          <span aria-hidden="true">📖</span>
+        <button id="text-mode-toggle" class="ghost-button ghost-button--small text-mode-toggle" type="button" aria-pressed="false" aria-label="Plain English">
           <span class="text-mode-toggle__label">Plain English</span>
         </button>
-        <button id="audience-toggle" class="ghost-button ghost-button--small audience-toggle" type="button" aria-pressed="false" aria-label="Toggle audience mode for presentations" title="Audience mode (A) — larger type for presentations">
-          <span aria-hidden="true">🎤</span>
+        <button id="audience-toggle" class="ghost-button ghost-button--small audience-toggle" type="button" aria-pressed="false" aria-label="Audience: larger type for presentations" title="Audience mode (A) — larger type for presentations">
           <span class="audience-toggle__label">Audience</span>
         </button>
         <button id="share-btn" class="icon-button" type="button" aria-label="Copy shareable demo URL" title="Copy shareable URL">
@@ -589,7 +587,7 @@ function renderPlayground(): HTMLElement {
           <button id="sign-btn" class="action-button" type="button" disabled aria-describedby="sign-help" aria-keyshortcuts="s">
             <span aria-hidden="true">✍</span> <span>Sign</span> <kbd class="kbd-hint" aria-hidden="true">S</kbd>
           </button>
-          <button id="bench-btn" class="ghost-button ghost-button--small" type="button" disabled aria-keyshortcuts="b" aria-label="Run a benchmark of 200 signatures">
+          <button id="bench-btn" class="ghost-button ghost-button--small" type="button" disabled aria-keyshortcuts="b" aria-label="Benchmark B: run a benchmark of 200 signatures">
             <span aria-hidden="true">⏱</span> <span>Benchmark</span> <kbd class="kbd-hint" aria-hidden="true">B</kbd>
           </button>
         </div>
@@ -1482,11 +1480,18 @@ function wireCopyButtons(root: HTMLElement): void {
 				? parseInt(button.dataset.copyTimer, 10)
 				: 0;
 			if (prevTimer) window.clearTimeout(prevTimer);
-			if (label) label.textContent = ok ? 'Copied' : 'Press Ctrl+C';
+			const word = ok ? 'Copied' : 'Press Ctrl+C';
+			if (label) label.textContent = word;
+			// The name opens with the word on the button, so it moves with it.
+			// axe 4.14 reports label-content-name-mismatch (WCAG 2.5.3 Label in
+			// Name) when the accessible name does not contain the visible text,
+			// and this button swaps its word on every copy.
+			button.setAttribute('aria-label', word);
 			button.classList.toggle('is-copied', ok);
 			announce(ok ? 'Copied to clipboard.' : 'Copy failed. Press Control or Command C.');
 			const timer = window.setTimeout(() => {
 				if (label) label.textContent = original;
+				button.setAttribute('aria-label', original);
 				button.classList.remove('is-copied');
 				delete button.dataset.copyTimer;
 			}, 1600);
@@ -1630,7 +1635,14 @@ function applyTextMode(mode: 'technical' | 'plain'): void {
 	if (btn) {
 		btn.setAttribute('aria-pressed', String(mode === 'plain'));
 		const label = btn.querySelector('.text-mode-toggle__label');
-		if (label) label.textContent = mode === 'plain' ? 'Technical' : 'Plain English';
+		const word = mode === 'plain' ? 'Technical' : 'Plain English';
+		if (label) label.textContent = word;
+		// The name is exactly the word on the button, and moves with it. It
+		// cannot simply be dropped in favour of the content: the label span is
+		// hidden by CSS at 380px, and with no aria-label the button then has no
+		// discernible text at all (axe button-name, critical). Keeping the two
+		// identical satisfies both that rule and label-content-name-mismatch.
+		btn.setAttribute('aria-label', word);
 	}
 	try {
 		localStorage.setItem(TEXT_MODE_KEY, mode);
@@ -1672,7 +1684,12 @@ function applyAudienceMode(on: boolean): void {
 	if (btn) {
 		btn.setAttribute('aria-pressed', String(on));
 		const label = btn.querySelector('.audience-toggle__label');
-		if (label) label.textContent = on ? 'Exit audience' : 'Audience';
+		const word = on ? 'Exit audience' : 'Audience';
+		if (label) label.textContent = word;
+		// The name opens with the word on the button, so it moves with it: axe
+		// 4.14 reports label-content-name-mismatch (WCAG 2.5.3 Label in Name)
+		// when the accessible name does not contain the visible text.
+		btn.setAttribute('aria-label', `${word}: larger type for presentations`);
 	}
 	try {
 		localStorage.setItem(AUDIENCE_MODE_KEY, on ? 'on' : 'off');
@@ -1849,7 +1866,7 @@ function renderTourOverlay(): HTMLElement {
 		</div>
 		<p class="tour-caption__text" id="tour-text">…</p>
 		<div class="tour-caption__actions">
-			<button type="button" class="ghost-button ghost-button--small" data-tour="back" aria-label="Previous step">‹ Back</button>
+			<button type="button" class="ghost-button ghost-button--small" data-tour="back" aria-label="Back: the previous step">‹ Back</button>
 			<button type="button" class="ghost-button ghost-button--small" data-tour="next">Next ›</button>
 			<button type="button" class="ghost-button ghost-button--small" data-tour="exit">Exit</button>
 		</div>
@@ -2281,7 +2298,7 @@ function openResultCard(data: ResultCardData): void {
 		<div class="result-modal__card" role="document">
 			<div class="result-modal__head">
 				<h2 id="result-modal-title">Your signature receipt</h2>
-				<button type="button" class="icon-button result-modal__close" data-close aria-label="Close result card">✕</button>
+				<button type="button" class="icon-button result-modal__close" data-close aria-label="Close result card"></button>
 			</div>
 			<canvas class="result-modal__preview" width="1080" height="608" aria-label="Result card preview"></canvas>
 			<dl class="result-modal__facts">
