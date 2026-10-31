@@ -21,10 +21,10 @@ export function buildPrecomputationPanel(): HTMLElement {
   panel.setAttribute('aria-labelledby','precomputation-heading');
   panel.innerHTML=`<h2 id="precomputation-heading">Precomputation moves the work</h2>
     <p>Our signing path samples fresh vinegar values and solves per call. This separate lifecycle model uses the historical category-V UOV example in Table 6 of <a href="https://doi.org/10.46586/tches.v2022.i1.245-269" target="_blank" rel="noopener noreferrer">Efficient Implementations of Rainbow and UOV using AVX2</a>, pp. 14–21, especially p. 17. Its denominator is the paper's 1,486,775-cycle baseline on its AVX2 platform; these are published cycles, not browser measurements or recommended parameters.</p>
-    <label for="precompute-count">Number of signatures to budget (1–1000)</label><input id="precompute-count" type="number" min="1" max="1000" value="1">
+    <label for="precompute-count">Number of signatures to budget (1–1000)</label><input class="precompute-control" id="precompute-count" type="number" min="1" max="1000" value="1">
     <p id="precompute-costs" role="status"></p>
     <button type="button" class="action-button" id="precompute-reserve">Reserve modeled one-use item</button>
-    <label for="precompute-item">Public inventory ID</label><select id="precompute-item" aria-label="Public inventory ID"></select>
+    <label for="precompute-item">Public inventory ID</label><select class="precompute-control" id="precompute-item" aria-label="Public inventory ID"></select>
     <button type="button" class="ghost-button" id="precompute-spend">Consume selected item</button><p id="precompute-status" role="status">No items reserved.</p>
     <p>Only public lifecycle metadata (ID and consumed status) appears here. Real precomputation also holds sensitive secret state; this model does not generate or display a UOV matrix. Consumed items cannot be reused. Reserve/consume does not accelerate the live signing engine.</p>
     <p>Leakage and reuse attacks require enough tuples and the relevant rank conditions. An equivalent signing key need not have the original key bytes. Do not transplant Rainbow or these historical security parameters; see <a href="https://nvlpubs.nist.gov/nistpubs/ir/2022/NIST.IR.8413-upd1.pdf" target="_blank" rel="noopener noreferrer">NIST IR 8413 update 1 §4.5.3</a>. Compare the existing secret-triple <a href="https://systemslibrarian.github.io/crypto-lab-spdz-forge/">bank/spend/reuse lesson in SPDZ Forge</a>.</p>`;

@@ -53,7 +53,8 @@
   text-transform: uppercase;
   color: var(--ink-soft);
 }
-.param-row select {
+.param-row select,
+.precompute-control {
   padding: 10px 14px;
   min-height: 44px;
   border-radius: 12px;
