@@ -2,6 +2,7 @@ import './style.css';
 import './extra.css';
 import { keygen, sign, verify, hashMessage } from './uov.ts';
 import { mountApp } from './ui.ts';
+import { buildPrecomputationPanel } from './precomputation.ts';
 
 // Self-test: prove the in-browser UOV scheme signs and verifies.
 console.group('crypto-lab-multivariate: UOV self-test');
@@ -19,6 +20,7 @@ console.log('Verify tampered signature:', verify(keys, target, tampered));
 console.groupEnd();
 
 mountApp(document.querySelector<HTMLDivElement>('#app')!);
+document.querySelector('#main-content')!.insertBefore(buildPrecomputationPanel(), document.querySelector('#main-content > footer'));
 
 (function initThemeToggle(): void {
 	const button = document.getElementById('theme-toggle') as HTMLButtonElement | null;

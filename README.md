@@ -77,3 +77,7 @@ npm run test:a11y  # axe-core WCAG A/AA gate (Playwright)
 *Part of the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
+
+## Research review extension 31 October 2026
+
+R20261031-12: The UOV extension computes offline, online and total costs from the paper's category-V AVX2 example and models one-use secret-state inventory. It does not accelerate the live fresh-vinegar signing path, generate precomputed UOV matrices or recommend historical Rainbow/UOV parameters.
