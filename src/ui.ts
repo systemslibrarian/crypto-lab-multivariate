@@ -2280,6 +2280,24 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 
 let currentModalCleanup: (() => void) | null = null;
 
+/**
+ * Escape a value for an HTML text position or a quoted attribute.
+ *
+ * The receipt card is the one place this lab parses a string as markup, and the
+ * message it shows comes from the `m` hash parameter -- accepted unvalidated in
+ * readUrlState and written straight into the textarea -- so a crafted link can
+ * put anything there. CodeQL named it js/xss-through-dom. `&` goes first, or
+ * the entities the later replacements add get escaped again.
+ */
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
 function openResultCard(data: ResultCardData): void {
 	// Tear down any prior modal AND its keydown listener — without this,
 	// re-opening the card stacks orphaned listeners on document that reference
@@ -2302,9 +2320,9 @@ function openResultCard(data: ResultCardData): void {
 			</div>
 			<canvas class="result-modal__preview" width="1080" height="608" aria-label="Result card preview"></canvas>
 			<dl class="result-modal__facts">
-				<div><dt>Message</dt><dd>${data.message.length > 70 ? data.message.slice(0, 67) + '…' : data.message}</dd></div>
+				<div><dt>Message</dt><dd>${escapeHtml(data.message.length > 70 ? data.message.slice(0, 67) + '…' : data.message)}</dd></div>
 				<div><dt>Params</dt><dd>UOV v=${data.v} · o=${data.o} over GF(256)</dd></div>
-				<div><dt>Sign / verify</dt><dd>${data.timings.sign} · ${data.timings.verify}</dd></div>
+				<div><dt>Sign / verify</dt><dd>${escapeHtml(data.timings.sign)} · ${escapeHtml(data.timings.verify)}</dd></div>
 				<div><dt>Attempts</dt><dd>${data.attempts}</dd></div>
 			</dl>
 			<div class="result-modal__actions">

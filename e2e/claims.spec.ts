@@ -145,3 +145,45 @@ test('claim labels match the live tour, comparison, preset, and scoreboard', asy
   await expect(page.locator('#sb-status')).toHaveText('UOV research candidate');
   await expect(page.locator('#verify-bad')).toContainText('Flip one byte');
 });
+
+/**
+ * The guard for CodeQL js/xss-through-dom (sink src/ui.ts, the receipt card).
+ *
+ * This one is REFLECTED, not self-inflicted: readUrlState accepts the `m` hash
+ * parameter with no validation and writes it straight into the message
+ * textarea, so a crafted link supplies the value and the visitor only has to
+ * press the lab's own buttons. Before the escape, opening the receipt card put
+ * a live element in the page.
+ */
+test('a message from a crafted link reaches the receipt card as text', async ({ page }) => {
+  test.setTimeout(180_000);
+  const payload = '<img src=x data-injected=yes>';
+  await page.goto('/#m=' + encodeURIComponent(payload));
+  await expect(page.locator('#msg')).toHaveValue(payload);
+
+  await page.evaluate(() => {
+    (window as unknown as { __seen: number }).__seen = 0;
+    new MutationObserver(() => {
+      const n = document.querySelectorAll('[data-injected]').length;
+      const w = window as unknown as { __seen: number };
+      if (n > w.__seen) w.__seen = n;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
+  for (const b of await page.$$('button')) {
+    const txt = ((await b.textContent()) || '').toLowerCase();
+    if (/generate|keygen|sign|verify/.test(txt)) {
+      await b.click().catch(() => {});
+      await page.waitForTimeout(700);
+    }
+  }
+  await expect(page.locator('#receipt-btn')).toBeEnabled();
+  await page.locator('#receipt-btn').click();
+  await expect(page.locator('#result-modal')).toBeVisible();
+
+  // Nothing the payload asked for exists as an element, in the card or anywhere.
+  expect(await page.evaluate(() => (window as unknown as { __seen: number }).__seen)).toBe(0);
+  await expect(page.locator('[data-injected]')).toHaveCount(0);
+  // And it is still shown, verbatim: escaping, not filtering.
+  await expect(page.locator('#result-modal')).toContainText(payload);
+});
