@@ -1167,7 +1167,7 @@ function renderAttack(): HTMLElement {
       </div>
     </div>
     <ol class="attack-flow" role="list">${steps}</ol>
-    <aside id="uov-research-note" class="warning-banner" aria-labelledby="uov-research-heading" style="scroll-margin-top: 6rem">
+    <aside role="note" id="uov-research-note" class="warning-banner" aria-labelledby="uov-research-heading" style="scroll-margin-top: 6rem">
       <div>
         <h3 id="uov-research-heading">UOV research update — 14 November 2026</h3>
         <p class="panel-copy"><a href="https://eprint.iacr.org/2026/2272" target="_blank" rel="noopener noreferrer">Li and Tao, ePrint 2026/2272</a> (revised 14 November 2026) estimate lower structural-attack costs for selected Round-3 UOV parameters using divided-power wedge attacks. This is a preprint: the estimates depend on conjectural Hilbert-series predictions, supported by small-instance experiments, not demonstrated production-key recovery.</p>
