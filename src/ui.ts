@@ -1167,6 +1167,13 @@ function renderAttack(): HTMLElement {
       </div>
     </div>
     <ol class="attack-flow" role="list">${steps}</ol>
+    <aside id="uov-research-note" class="warning-banner" aria-labelledby="uov-research-heading" style="scroll-margin-top: 6rem">
+      <div>
+        <h3 id="uov-research-heading">UOV research update — 14 November 2026</h3>
+        <p class="panel-copy"><a href="https://eprint.iacr.org/2026/2272" target="_blank" rel="noopener noreferrer">Li and Tao, ePrint 2026/2272</a> (revised 14 November 2026) estimate lower structural-attack costs for selected Round-3 UOV parameters using divided-power wedge attacks. This is a preprint: the estimates depend on conjectural Hilbert-series predictions, supported by small-instance experiments, not demonstrated production-key recovery.</p>
+        <p class="panel-copy">The paper’s parameter sets differ from the older ov-Ip reference in this lab’s comparison. Do not transfer its estimates to that row or to our tiny teaching keys. This browser does not execute the new attack; the hands-on attack below remains the balanced Kipnis–Shamir example.</p>
+      </div>
+    </aside>
     <div class="warning-banner" role="note">
       <span class="warning-banner__icon" aria-hidden="true">⚠️</span>
       <span>Rainbow is broken and was not standardised by NIST. The UOV scheme above uses tiny teaching parameters and is for education only — never use either for real signatures.</span>

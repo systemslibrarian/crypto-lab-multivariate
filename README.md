@@ -24,6 +24,8 @@ Below the playground, a five-step walkthrough explains the Beullens attacks on R
 
 ## What Can Go Wrong
 
+- **UOV structural-attack estimates — 14 November 2026.** [Li and Tao, *Attacking UOV-based Signatures over divided power algebras*, ePrint 2026/2272](https://eprint.iacr.org/2026/2272), revised 14 November 2026, is a **preprint; conditional extrapolation**. Its estimates for selected Round-3 UOV parameters depend on conjectural Hilbert-series predictions supported by small-instance experiments, not demonstrated production-key recovery. Its parameters differ from this lab’s older ov-Ip comparison row; the estimates must not be transferred to that row or tiny teaching keys. This lab does not execute the divided-power wedge attack. The visible note is below **How Rainbow Fell** ([direct link](https://systemslibrarian.github.io/crypto-lab-multivariate/#uov-research-note)). The executable attack remains the balanced Kipnis–Shamir example.
+
 - **Balanced parameters (v = o)** — the original 1997 Oil-and-Vinegar scheme used equal oil and vinegar counts and was broken by Kipnis and Shamir within a year; the "unbalanced" v > o variant exists to defeat that attack. The **Break it yourself** exhibit runs that break live at toy scale, and runs it again against unbalanced parameters to watch it fail.
 - **Extra structure invites attacks** — Rainbow's second Oil-and-Vinegar layer shrank signatures but created the algebraic relationships Beullens exploited to recover the oil subspace.
 - **Underestimating the public key** — multivariate public keys run to hundreds of kilobytes, which can be prohibitive for constrained protocols even though signatures are tiny.

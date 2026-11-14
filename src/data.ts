@@ -218,6 +218,13 @@ export const CITATIONS: Citation[] = [
 		note: 'Recovered Rainbow keys on a laptop — knocked it out of NIST Round 3.',
 	},
 	{
+		label: 'Li–Tao 2026',
+		title: 'Attacking UOV-based Signatures over divided power algebras',
+		venue: 'ePrint 2026/2272; preprint revised 14 November 2026',
+		href: 'https://eprint.iacr.org/2026/2272',
+		note: 'Conditional structural-attack estimates under conjectural Hilbert-series predictions; not production-key recovery or an attack executed by this lab.',
+	},
+	{
 		label: 'NIST PQC',
 		title: 'Post-Quantum Cryptography Standardization',
 		venue: 'NIST CSRC',
