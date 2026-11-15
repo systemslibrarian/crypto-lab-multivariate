@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { SIG_COMPARE } from './data.ts';
+import uiSource from './ui.ts?raw';
+import { SCHEMES, SIG_COMPARE } from './data.ts';
 
 /**
  * Falcon signatures are variable-length. 666 B is the PADDED size the spec
@@ -35,5 +36,55 @@ describe('signature size qualifiers', () => {
 			expect(row.sigNote, `${row.scheme} signature size is exact`).toBeUndefined();
 			expect(row.sig, `${row.scheme} must render a bare size`).not.toContain('≈');
 		}
+	});
+});
+
+/**
+ * Multivariate parameter sets are still being retuned, so a size without a
+ * round attached is a figure with no shelf life.
+ *
+ *  - MAYO carried '~1.2 KB / ~321 B'. Those are the Round-1 numbers — the
+ *    September 2023 submission's (66, 64, 8, 9, 16) set, 1168 B and 321 B.
+ *    MAYO1 in the Round-2 specification (Table 2.1) is 1420 B / 454 B, which is
+ *    what the sibling crypto-lab-mayo-seal runs, and Round 3 retunes it again
+ *    to 1456 B / 464 B.
+ *  - The ov-Ip row's 278,432 B and 128 B are Round-2 (112, 44) figures. UOV
+ *    version 3.0 moves uov-Ip to (119, 45) and 321,300 B / 135 B.
+ *
+ * So the round label has to sit beside the numbers, in the data and in the
+ * receipt card's prose, not only in a source comment.
+ */
+describe('parameter-set figures name their round', () => {
+	it('MAYO shows the Round-2 MAYO1 sizes and says so', () => {
+		const mayo = SCHEMES.find((s) => s.name === 'MAYO');
+		expect(mayo).toBeDefined();
+		expect(mayo!.pubKey).toBe('1,420 B');
+		expect(mayo!.signature).toBe('454 B');
+		expect(mayo!.note).toMatch(/Round-2 specification/);
+		// The Round-1 figures must not come back.
+		expect(mayo!.pubKey).not.toMatch(/1\.2 KB/);
+		expect(mayo!.signature).not.toMatch(/321/);
+	});
+
+	it('the ov-Ip comparison row carries its round in the visible label', () => {
+		const uov = SIG_COMPARE.find((r) => r.family === 'Multivariate' && /ov-Ip/.test(r.scheme));
+		expect(uov).toBeDefined();
+		expect(uov!.scheme).toContain('Round 2');
+		expect(uov!.pubKeyBytes).toBe(278432);
+		expect(uov!.sigBytes).toBe(128);
+	});
+
+	it('the UOV lineage card names the round its sizes come from', () => {
+		const uov = SCHEMES.find((s) => s.name.startsWith('UOV'));
+		expect(uov).toBeDefined();
+		expect(uov!.note).toMatch(/Round-2 specification \(version 2\.0, February 2025\)/);
+		expect(uov!.note).toMatch(/321,300 B/);
+	});
+
+	it('the receipt card states the round beside the ov-Ip numbers', () => {
+		const note = uiSource.split('\n').find((line: string) => line.includes('278,432-byte'));
+		expect(note, 'the receipt-card note still quotes the ov-Ip public key').toBeDefined();
+		expect(note).toMatch(/Round-2 specification \(version 2\.0, February 2025\)/);
+		expect(note).toContain('128-byte signatures');
 	});
 });
