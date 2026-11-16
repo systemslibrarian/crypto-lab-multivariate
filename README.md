@@ -35,10 +35,12 @@ Below the playground, a five-step walkthrough explains the Beullens attacks on R
 ## Real-World Usage
 
 - **NIST PQC standardisation** — Rainbow reached the Round 3 finals before the 2022 break removed it from contention; NIST standardised lattice and hash schemes instead.
-- **NIST additional-signatures on-ramp** — UOV and the modern MAYO variant were submitted to NIST's call for additional post-quantum signatures, keeping the family in active research.
+- **NIST additional-signatures on-ramp** — UOV and the modern MAYO variant were submitted to NIST's call for additional post-quantum signatures, keeping the family in active research. Both [advanced to Round 3](https://csrc.nist.gov/News/2026/nist-advances-9-candidates-to-the-3rd-round-of-pqc) on 14 May 2026; NIST IR 8610 gives the rationale, and the round-3 candidates also include the multivariate QR-UOV and SNOVA.
 - **Smallest-signature niche** — multivariate schemes remain of interest where signature size dominates and large public keys are acceptable, such as certain constrained verification settings.
 - **Cryptanalysis research** — the Oil-and-Vinegar family is a standard teaching and research target for understanding structural attacks like MinRank.
 - **Historical lesson** — the repeated breaks of multivariate trapdoors are routinely cited as motivation for preferring lattice-based assumptions.
+
+**Standards reviewed 15 November 2026:** round status taken from NIST IR 8610 (May 2026), which closed round 2 on 14 May 2026 and selected nine third-round candidates — FAEST, HAWK, MAYO, MQOM, QR-UOV, SDitH, SNOVA, SQIsign and UOV. HAWK has since been withdrawn (see Related Demos). The size figures on this page keep their Round-2 labels because they are Round-2 values: the UOV round-3 submission (version 3.0, August 2026) moves uov-Ip to (119, 45) with a 321,300 B expanded public key and a 135 B signature, and the MAYO round-3 submission retunes MAYO1 to 1,456 B and 464 B.
 
 ## How to Run Locally
 
@@ -55,7 +57,7 @@ npm run dev
 - [crypto-lab-falcon-seal](https://systemslibrarian.github.io/crypto-lab-falcon-seal/) — Falcon/FN-DSA NTRU lattice signatures with compact output.
 - [crypto-lab-sphincs-ledger](https://systemslibrarian.github.io/crypto-lab-sphincs-ledger/) — SLH-DSA hash-based signatures, a conservative PQ alternative.
 - [crypto-lab-mpcith-sign](https://systemslibrarian.github.io/crypto-lab-mpcith-sign/) — MPC-in-the-Head signatures, another non-lattice PQ approach.
-- [crypto-lab-hawk](https://systemslibrarian.github.io/crypto-lab-hawk/) — HAWK lattice signatures with Gaussian sampling.
+- [crypto-lab-hawk](https://systemslibrarian.github.io/crypto-lab-hawk/) — HAWK lattice signatures with Gaussian sampling; [NIST lists it as withdrawn](https://csrc.nist.gov/projects/pqc-dig-sig/round-3-additional-signatures) after a key-recovery attack, and [its own submission team](https://hawk-sign.info/) dates the withdrawal 29 July 2026 and states that Hawk "is insecure and should not be used".
 
 ## Tech
 

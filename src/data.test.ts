@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import uiSource from './ui.ts?raw';
-import { SCHEMES, SIG_COMPARE } from './data.ts';
+import readme from '../README.md?raw';
+import { CITATIONS, SCHEMES, SIG_COMPARE } from './data.ts';
 
 /**
  * Falcon signatures are variable-length. 666 B is the PADDED size the spec
@@ -87,4 +88,91 @@ describe('parameter-set figures name their round', () => {
 		expect(note).toMatch(/Round-2 specification \(version 2\.0, February 2025\)/);
 		expect(note).toContain('128-byte signatures');
 	});
+});
+
+/**
+ * Standards reviewed 15 November 2026.
+ *
+ * NIST IR 8610 (May 2026) closed the second round of the Additional Digital
+ * Signature Schemes process on 14 May 2026 and selected nine candidates for the
+ * third round: FAEST, HAWK, MAYO, MQOM, QR-UOV, SDitH, SNOVA, SQIsign and UOV.
+ * So "on-ramp candidate" and "currently under review" are no longer the whole
+ * status for UOV or MAYO — the round they reached is part of it, and a status
+ * line without it goes stale the moment a reader asks which round.
+ *
+ * The round label on the SIZES is a separate claim and is asserted above: this
+ * page keeps the Round-2 figures, so the Round-2 labels stay.
+ */
+describe('status lines name the round the scheme reached', () => {
+	it('the UOV lineage card states the Round 3 advancement with its date and source', () => {
+		const uov = SCHEMES.find((s) => s.name.startsWith('UOV'));
+		expect(uov).toBeDefined();
+		expect(uov!.note).toMatch(/Round 3/);
+		expect(uov!.note).toMatch(/14 May 2026/);
+		expect(uov!.note).toMatch(/NIST IR 8610/);
+	});
+
+	it('the MAYO lineage card states the Round 3 advancement with its date and source', () => {
+		const mayo = SCHEMES.find((s) => s.name === 'MAYO');
+		expect(mayo).toBeDefined();
+		expect(mayo!.note).toMatch(/Round 3/);
+		expect(mayo!.note).toMatch(/14 May 2026/);
+		expect(mayo!.note).toMatch(/NIST IR 8610/);
+	});
+
+	it('the MAYO citation does not leave "under review" as the whole status', () => {
+		const mayo = CITATIONS.find((c) => c.label === 'MAYO 2021');
+		expect(mayo).toBeDefined();
+		expect(mayo!.note).toMatch(/Round 3/);
+		expect(mayo!.note).toMatch(/14 May 2026/);
+		expect(mayo!.note).toMatch(/NIST IR 8610/);
+	});
+});
+
+/**
+ * Standards reviewed 15 November 2026.
+ *
+ * The HAWK related-demo line used to read "HAWK lattice signatures with
+ * Gaussian sampling" with no status, which walks a reader into a lab that opens
+ * by saying the scheme is withdrawn and insecure.
+ *
+ * The two sources carry different facts and must not be blended: NIST's round-3
+ * additional-signatures page states the withdrawal but carries NO date, while
+ * the HAWK team's own site carries the date (29 July 2026) and the banner
+ * "Hawk is insecure and should not be used." The attack's technical detail
+ * stays in crypto-lab-hawk, which has read the paper; this line does not.
+ */
+describe('the HAWK related-demo link is historical, not an active-candidate blurb', () => {
+	const line = readme.split('\n').find((l: string) => l.startsWith('- [crypto-lab-hawk]'));
+
+	it('still links the HAWK lab', () => {
+		expect(line).toBeDefined();
+		expect(line).toContain('https://systemslibrarian.github.io/crypto-lab-hawk/');
+	});
+
+	it('states the withdrawal and cites NIST for it', () => {
+		expect(line).toMatch(/withdrawn/);
+		expect(line).toContain('https://csrc.nist.gov/projects/pqc-dig-sig/round-3-additional-signatures');
+	});
+
+	it('takes the date and the "insecure" statement from the HAWK team, not from NIST', () => {
+		expect(line).toContain('https://hawk-sign.info/');
+		expect(line).toMatch(/29 July 2026/);
+		expect(line).toMatch(/is insecure and should not be used/);
+		expect(line).not.toMatch(/round-3-additional-signatures\)[^[]*29 July 2026/);
+	});
+
+	it('does not import the attack internals this lab has not read', () => {
+		expect(line).not.toMatch(/SVP|cocycle|Galois|gates/);
+	});
+});
+
+/**
+ * The dated note records what was re-read, and that the Round-2 size labels
+ * stayed put because the sizes are Round-2 values.
+ */
+it('the dated standards note records the round 3 selection and keeps the round-2 labels', () => {
+	expect(readme).toMatch(/\*\*Standards reviewed 15 November 2026:\*\*/);
+	expect(readme).toMatch(/NIST IR 8610/);
+	expect(readme).toMatch(/keep their Round-2 labels/);
 });

@@ -24,7 +24,7 @@ export const SCHEMES: MvScheme[] = [
 		year: '1999',
 		pubKey: '~272 KB',
 		signature: '128 B',
-		note: 'The original single-layer scheme that Rainbow generalised. Without Rainbow\u2019s extra layer structure, UOV avoids the specific weakness Beullens exploited and remains a NIST on-ramp candidate. The sizes shown are uov-Ip from the Round-2 specification (version 2.0, February 2025); the Round-3 submission (version 3.0) moves uov-Ip to (119, 45) over F256, with a 321,300 B expanded public key and a 135 B signature.',
+		note: 'The original single-layer scheme that Rainbow generalised. Without Rainbow\u2019s extra layer structure, UOV avoids the specific weakness Beullens exploited and remains a NIST on-ramp candidate: it advanced to Round 3 of the additional-signatures process on 14 May 2026 (NIST IR 8610). The sizes shown are uov-Ip from the Round-2 specification (version 2.0, February 2025); the Round-3 submission (version 3.0) moves uov-Ip to (119, 45) over F256, with a 321,300 B expanded public key and a 135 B signature.',
 	},
 	{
 		name: 'MAYO',
@@ -32,7 +32,7 @@ export const SCHEMES: MvScheme[] = [
 		year: '2021',
 		pubKey: '1,420 B',
 		signature: '454 B',
-		note: 'A modern "whipped" Oil-and-Vinegar variant with much smaller keys, submitted to the NIST additional-signatures on-ramp. These are the MAYO1 sizes from the Round-2 specification, Table 2.1 — the ones the sibling crypto-lab-mayo-seal runs; the Round-3 submission (August 2026) retunes MAYO1 to a 1,456 B public key and a 464 B signature.',
+		note: 'A modern "whipped" Oil-and-Vinegar variant with much smaller keys, submitted to the NIST additional-signatures on-ramp and advanced to Round 3 on 14 May 2026 (NIST IR 8610). These are the MAYO1 sizes from the Round-2 specification, Table 2.1 — the ones the sibling crypto-lab-mayo-seal runs; the Round-3 submission (August 2026) retunes MAYO1 to a 1,456 B public key and a 464 B signature.',
 	},
 	{
 		name: 'Oil & Vinegar (balanced)',
@@ -244,7 +244,7 @@ export const CITATIONS: Citation[] = [
 		title: 'MAYO: Practical Post-Quantum Signatures from Oil-and-Vinegar',
 		venue: 'NIST additional-signatures on-ramp',
 		href: 'https://pqmayo.org/',
-		note: 'Modern UOV variant currently under review. Its Round-2 specification, Table 2.1, is where this page’s MAYO1 sizes (1,420 B and 454 B) come from.',
+		note: 'Modern UOV variant currently under review — advanced to Round 3 of NIST’s additional-signatures process on 14 May 2026 (NIST IR 8610). Its Round-2 specification, Table 2.1, is where this page’s MAYO1 sizes (1,420 B and 454 B) come from.',
 	},
 	{
 		label: 'UOV v2.0',
