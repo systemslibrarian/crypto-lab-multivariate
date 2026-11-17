@@ -49,7 +49,7 @@ describe('signature size qualifiers', () => {
  *    MAYO1 in the Round-2 specification (Table 2.1) is 1420 B / 454 B, which is
  *    what the sibling crypto-lab-mayo-seal runs, and Round 3 retunes it again
  *    to 1456 B / 464 B.
- *  - The ov-Ip row's 278,432 B and 128 B are Round-2 (112, 44) figures. UOV
+ *  - The uov-Ip row's 278,432 B and 128 B are Round-2 (112, 44) figures. UOV
  *    version 3.0 moves uov-Ip to (119, 45) and 321,300 B / 135 B.
  *
  * So the round label has to sit beside the numbers, in the data and in the
@@ -67,8 +67,8 @@ describe('parameter-set figures name their round', () => {
 		expect(mayo!.signature).not.toMatch(/321/);
 	});
 
-	it('the ov-Ip comparison row carries its round in the visible label', () => {
-		const uov = SIG_COMPARE.find((r) => r.family === 'Multivariate' && /ov-Ip/.test(r.scheme));
+	it('the uov-Ip comparison row carries its round in the visible label', () => {
+		const uov = SIG_COMPARE.find((r) => r.family === 'Multivariate' && /uov-Ip/.test(r.scheme));
 		expect(uov).toBeDefined();
 		expect(uov!.scheme).toContain('Round 2');
 		expect(uov!.pubKeyBytes).toBe(278432);
@@ -82,9 +82,9 @@ describe('parameter-set figures name their round', () => {
 		expect(uov!.note).toMatch(/321,300 B/);
 	});
 
-	it('the receipt card states the round beside the ov-Ip numbers', () => {
+	it('the receipt card states the round beside the uov-Ip numbers', () => {
 		const note = uiSource.split('\n').find((line: string) => line.includes('278,432-byte'));
-		expect(note, 'the receipt-card note still quotes the ov-Ip public key').toBeDefined();
+		expect(note, 'the receipt-card note still quotes the uov-Ip public key').toBeDefined();
 		expect(note).toMatch(/Round-2 specification \(version 2\.0, February 2025\)/);
 		expect(note).toContain('128-byte signatures');
 	});

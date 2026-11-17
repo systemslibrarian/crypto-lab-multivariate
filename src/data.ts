@@ -144,8 +144,8 @@ export const SIG_COMPARE: SigCompare[] = [
 	},
 	{
 		family: 'Multivariate',
-		scheme: 'UOV (ov-Ip, Round 2)',
-		// NIST on-ramp parameter set ov-Ip: (n, m, q) = (112, 44, 256), so the
+		scheme: 'UOV (uov-Ip, Round 2)',
+		// NIST on-ramp parameter set uov-Ip: (n, m, q) = (112, 44, 256), so the
 		// expanded public key is m·n(n+1)/2 = 44 × 6328 = 278,432 bytes. That is
 		// 272 KiB, not 278 KiB — the earlier '278 KB' label was the byte count's
 		// leading digits mistaken for kilobytes, and pubKeyBytes had been
@@ -258,7 +258,7 @@ export const CITATIONS: Citation[] = [
 		title: 'UOV: Algorithm Specifications and Supporting Documentation',
 		venue: 'NIST on-ramp Round 2, version 2.0, February 2025',
 		href: 'https://csrc.nist.gov/csrc/media/Projects/pqc-dig-sig/documents/round-2/spec-files/uov-spec-round2-web.pdf',
-		note: 'Table 1 is the source of the ov-Ip sizes on this page: (112, 44) over F256, a 278,432 B expanded public key and a 128 B signature. Version 3.0 (August 2026) retunes that set.',
+		note: 'Table 1 is the source of the uov-Ip sizes on this page: (112, 44) over F256, a 278,432 B expanded public key and a 128 B signature. Version 3.0 (August 2026) retunes that set.',
 	},
 ];
 
