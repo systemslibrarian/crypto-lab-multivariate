@@ -43,6 +43,12 @@ function defaultRngByte(): number {
 
 let rngByte: () => number = defaultRngByte;
 
+// One byte from the current source. Exported so that sibling modules (the
+// layered-map exhibit) draw from the same injectable stream as this file.
+export function randomByte(): number {
+	return rngByte();
+}
+
 // Override the byte source (e.g. a seeded PRNG in tests). Returns the previous
 // source so callers can restore it. Pass no argument to reset to the CSPRNG.
 export function setRngByte(fn?: () => number): () => number {
@@ -52,7 +58,7 @@ export function setRngByte(fn?: () => number): () => number {
 }
 
 // --- linear algebra over GF(256) ------------------------------------------
-function matVec(M: number[][], x: number[]): number[] {
+export function matVec(M: number[][], x: number[]): number[] {
 	const n = M.length;
 	const out = new Array(n).fill(0);
 	for (let i = 0; i < n; i++) {
@@ -63,7 +69,7 @@ function matVec(M: number[][], x: number[]): number[] {
 	return out;
 }
 
-function randomInvertible(n: number): { M: number[][]; inv: number[][] } {
+export function randomInvertible(n: number): { M: number[][]; inv: number[][] } {
 	// generate random matrices until one is invertible (fast for small n)
 	for (let attempt = 0; attempt < 1000; attempt++) {
 		const M: number[][] = Array.from({ length: n }, () =>
@@ -109,7 +115,7 @@ function invertMatrix(M: number[][]): number[][] | null {
 }
 
 // solve A x = b for x (A is m x m), returns null if singular
-function solveLinear(A: number[][], b: number[]): number[] | null {
+export function solveLinear(A: number[][], b: number[]): number[] | null {
 	const m = A.length;
 	const aug = A.map((row, i) => [...row, b[i]]);
 	for (let col = 0; col < m; col++) {
@@ -177,7 +183,7 @@ export function keygen(params: UovParams): UovKeys {
 }
 
 // compute the quadratic form of Q(S·y) as an upper-triangular matrix in y
-function composeQuadLinear(Q: Quad, S: number[][], n: number): Quad {
+export function composeQuadLinear(Q: Quad, S: number[][], n: number): Quad {
 	const R: Quad = Array.from({ length: n }, () => new Array(n).fill(0));
 	for (let i = 0; i < n; i++)
 		for (let j = i; j < n; j++) {
