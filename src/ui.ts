@@ -1173,7 +1173,7 @@ function renderAttack(): HTMLElement {
         <p class="panel-copy"><a href="https://eprint.iacr.org/2026/2444" target="_blank" rel="noopener noreferrer">Li and Tao, ePrint 2026/2444</a> (revised 16 November 2026) report lower attack-cost estimates for selected additional Round-3 MAYO parameter sets. This preprint relies on conjectural Hilbert-series and structured-rank predictions; it does not demonstrate production-key recovery. Its estimates do not establish the security of historical Round-2 sets or this lab’s tiny teaching keys. The browser does not execute this attack.</p>
         <h3 id="uov-research-heading">UOV research update — 14 November 2026</h3>
         <p class="panel-copy"><a href="https://eprint.iacr.org/2026/2272" target="_blank" rel="noopener noreferrer">Li and Tao, ePrint 2026/2272</a> (revised 14 November 2026) estimate lower structural-attack costs for selected Round-3 UOV parameters using divided-power wedge attacks. This is a preprint: the estimates depend on conjectural Hilbert-series predictions, supported by small-instance experiments, not demonstrated production-key recovery.</p>
-        <p class="panel-copy">The paper’s parameter sets differ from the older uov-Ip reference in this lab’s comparison. Do not transfer its estimates to that row or to our tiny teaching keys. This browser does not execute the new attack; the hands-on attack below remains the balanced Kipnis–Shamir example.</p>
+        <p class="panel-copy">The paper’s parameter sets are not established here to be this lab’s uov-Ip comparison row. Do not transfer its estimates to that row or to our tiny teaching keys. This browser does not execute the new attack; the hands-on attack below remains the balanced Kipnis–Shamir example.</p>
       </div>
     </aside>
     <div class="warning-banner" role="note">
@@ -2339,7 +2339,7 @@ function openResultCard(data: ResultCardData): void {
 				<button type="button" class="ghost-button ghost-button--small" data-action="copy-text"><span aria-hidden="true">📋</span> Copy summary</button>
 				<button type="button" class="ghost-button ghost-button--small" data-action="copy-link"><span aria-hidden="true">🔗</span> Copy permalink</button>
 			</div>
-			<p class="result-modal__note">Educational only — these are toy parameters. Real UOV, at the uov-Ip parameter set of the Round-2 specification (version 2.0, February 2025) in NIST&rsquo;s additional-signatures on-ramp, uses 128-byte signatures and a 278,432-byte (≈272 KB) expanded public key. Round 3 retunes that set to (119, 45): 135-byte signatures, a 321,300-byte expanded public key.</p>
+			<p class="result-modal__note">Educational only — these are toy parameters. Real UOV, at the uov-Ip parameter set of the Round-3 specification (version 3.0, 30 August 2026) in NIST&rsquo;s additional-signatures on-ramp, uses 135-byte signatures and a 321,300-byte (≈314 KB) expanded public key. Round 2 (version 2.0, February 2025) had (112, 44): 128-byte signatures, a 278,432-byte expanded public key.</p>
 		</div>
 	`;
 	document.body.appendChild(modal);

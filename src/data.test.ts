@@ -49,8 +49,10 @@ describe('signature size qualifiers', () => {
  *    MAYO1 in the Round-2 specification (Table 2.1) is 1420 B / 454 B, which is
  *    what the sibling crypto-lab-mayo-seal runs, and Round 3 retunes it again
  *    to 1456 B / 464 B.
- *  - The uov-Ip row's 278,432 B and 128 B are Round-2 (112, 44) figures. UOV
- *    version 3.0 moves uov-Ip to (119, 45) and 321,300 B / 135 B.
+ *  - The uov-Ip row's 321,300 B and 135 B are the Round-3 (119, 45) figures,
+ *    from version 3.0 (30 August 2026) Table 1. It carried Round-2's (112, 44)
+ *    278,432 B / 128 B until 2026-11-18. Either round is fine; the label and
+ *    the numbers disagreeing is not, in EITHER direction.
  *
  * So the round label has to sit beside the numbers, in the data and in the
  * receipt card's prose, not only in a source comment.
@@ -70,23 +72,40 @@ describe('parameter-set figures name their round', () => {
 	it('the uov-Ip comparison row carries its round in the visible label', () => {
 		const uov = SIG_COMPARE.find((r) => r.family === 'Multivariate' && /uov-Ip/.test(r.scheme));
 		expect(uov).toBeDefined();
-		expect(uov!.scheme).toContain('Round 2');
-		expect(uov!.pubKeyBytes).toBe(278432);
-		expect(uov!.sigBytes).toBe(128);
+		// Whichever round the label names, the sizes must be that round's. Pinned
+		// as a mapping rather than a single round so the row can move again
+		// without this test having to be rewritten to stay meaningful -- and so
+		// that moving the numbers without the label still fails.
+		const byRound: Record<string, { pk: number; sig: number }> = {
+			'Round 2': { pk: 278432, sig: 128 },
+			'Round 3': { pk: 321300, sig: 135 },
+		};
+		const round = Object.keys(byRound).find((r) => uov!.scheme.includes(r));
+		expect(round, 'the uov-Ip row must name its round in the visible label').toBeDefined();
+		expect(uov!.pubKeyBytes).toBe(byRound[round!].pk);
+		expect(uov!.sigBytes).toBe(byRound[round!].sig);
+		// And the public key must be the parameter set's own arithmetic, not a
+		// number typed in: m * n(n+1)/2 over (119, 45) is 321,300.
+		if (round === 'Round 3') expect(uov!.pubKeyBytes).toBe(45 * ((119 * 120) / 2));
 	});
 
 	it('the UOV lineage card names the round its sizes come from', () => {
 		const uov = SCHEMES.find((s) => s.name.startsWith('UOV'));
 		expect(uov).toBeDefined();
-		expect(uov!.note).toMatch(/Round-2 specification \(version 2\.0, February 2025\)/);
+		expect(uov!.note).toMatch(/Round-3 specification \(version 3\.0, 30 August 2026\)/);
 		expect(uov!.note).toMatch(/321,300 B/);
+		// The superseded figures stay recorded, so a reader meeting 278,432
+		// elsewhere can place it rather than treat it as a contradiction.
+		expect(uov!.note).toMatch(/278,432 B and 128 B/);
 	});
 
 	it('the receipt card states the round beside the uov-Ip numbers', () => {
-		const note = uiSource.split('\n').find((line: string) => line.includes('278,432-byte'));
+		const note = uiSource.split('\n').find((line: string) => line.includes('321,300-byte'));
 		expect(note, 'the receipt-card note still quotes the uov-Ip public key').toBeDefined();
-		expect(note).toMatch(/Round-2 specification \(version 2\.0, February 2025\)/);
-		expect(note).toContain('128-byte signatures');
+		expect(note).toMatch(/Round-3 specification \(version 3\.0, 30 August 2026\)/);
+		expect(note).toContain('135-byte signatures');
+		// Round 2 stays named in the same sentence, for the same reason as above.
+		expect(note).toContain('278,432-byte');
 	});
 });
 

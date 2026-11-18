@@ -22,9 +22,9 @@ export const SCHEMES: MvScheme[] = [
 		name: 'UOV (Unbalanced Oil & Vinegar)',
 		status: 'research',
 		year: '1999',
-		pubKey: '~272 KB',
-		signature: '128 B',
-		note: 'The original single-layer scheme that Rainbow generalised. Without Rainbow\u2019s extra layer structure, UOV avoids the specific weakness Beullens exploited and remains a NIST on-ramp candidate: it advanced to Round 3 of the additional-signatures process on 14 May 2026 (NIST IR 8610). The sizes shown are uov-Ip from the Round-2 specification (version 2.0, February 2025); the Round-3 submission (version 3.0) moves uov-Ip to (119, 45) over F256, with a 321,300 B expanded public key and a 135 B signature.',
+		pubKey: '~314 KB',
+		signature: '135 B',
+		note: 'The original single-layer scheme that Rainbow generalised. Without Rainbow\u2019s extra layer structure, UOV avoids the specific weakness Beullens exploited and remains a NIST on-ramp candidate: it advanced to Round 3 of the additional-signatures process on 14 May 2026 (NIST IR 8610). The sizes shown are uov-Ip from the Round-3 specification (version 3.0, 30 August 2026) Table 1: (119, 45) over F256, a 321,300 B expanded public key and a 135 B signature. Version 2.0 (February 2025) had (112, 44) with 278,432 B and 128 B.',
 	},
 	{
 		name: 'MAYO',
@@ -144,25 +144,26 @@ export const SIG_COMPARE: SigCompare[] = [
 	},
 	{
 		family: 'Multivariate',
-		scheme: 'UOV (uov-Ip, Round 2)',
-		// NIST on-ramp parameter set uov-Ip: (n, m, q) = (112, 44, 256), so the
-		// expanded public key is m·n(n+1)/2 = 44 × 6328 = 278,432 bytes. That is
-		// 272 KiB, not 278 KiB — the earlier '278 KB' label was the byte count's
-		// leading digits mistaken for kilobytes, and pubKeyBytes had been
-		// back-computed from it as 278 × 1024.
+		scheme: 'UOV (uov-Ip, Round 3)',
+		// NIST on-ramp parameter set uov-Ip: (n, m, q) = (119, 45, 256) in the
+		// Round-3 specification (version 3.0, 30 August 2026) Table 1, so the
+		// expanded public key is m·n(n+1)/2 = 45 × 7140 = 321,300 bytes. That is
+		// 314 KiB, not 321 KiB — reading the byte count's leading digits as
+		// kilobytes is the mistake this row carried once before, when '278 KB'
+		// was labelled from 278,432 and pubKeyBytes was back-computed as
+		// 278 × 1024.
 		//
-		// (112, 44) is the Round-2 parameter set: UOV version 2.0 (February 2025),
-		// Table 1, gives uov-Ip a 278,432 B expanded public key, a 237,896 B
-		// expanded secret key and a 128 B signature. The Round-3 submission
-		// (version 3.0, August 2026) moves uov-Ip to (119, 45) over F256 —
-		// 321,300 B / 278,087 B / 135 B — so the round has to travel with the
-		// numbers. The scheme label carries it, because every other row here is
-		// a fixed standardised size with no round to name.
-		pubKey: '272 KB',
-		pubKeyBytes: 278432,
-		sig: '128 B',
-		sigBytes: 128,
-		feel: 'pubkey ≈ 2 phone photos · 128-byte signature',
+		// The round travels with the numbers, which is why the scheme label names
+		// it at all: every other row here is a fixed standardised size with no
+		// round to name. This row held the Round-2 set until 2026-11-18 --
+		// (112, 44) with 278,432 B / 237,896 B / 128 B from version 2.0 (February
+		// 2025) Table 1 -- and moving the numbers without the label, or the label
+		// without the numbers, is the drift the test pins against.
+		pubKey: '314 KB',
+		pubKeyBytes: 321300,
+		sig: '135 B',
+		sigBytes: 135,
+		feel: 'pubkey ≈ 2 phone photos · 135-byte signature',
 		status: 'research',
 	},
 ];
@@ -254,11 +255,11 @@ export const CITATIONS: Citation[] = [
 		note: 'Modern UOV variant currently under review — advanced to Round 3 of NIST’s additional-signatures process on 14 May 2026 (NIST IR 8610). Its Round-2 specification, Table 2.1, is where this page’s MAYO1 sizes (1,420 B and 454 B) come from.',
 	},
 	{
-		label: 'UOV v2.0',
+		label: 'UOV v3.0',
 		title: 'UOV: Algorithm Specifications and Supporting Documentation',
-		venue: 'NIST on-ramp Round 2, version 2.0, February 2025',
-		href: 'https://csrc.nist.gov/csrc/media/Projects/pqc-dig-sig/documents/round-2/spec-files/uov-spec-round2-web.pdf',
-		note: 'Table 1 is the source of the uov-Ip sizes on this page: (112, 44) over F256, a 278,432 B expanded public key and a 128 B signature. Version 3.0 (August 2026) retunes that set.',
+		venue: 'NIST on-ramp Round 3, version 3.0, 30 August 2026',
+		href: 'https://csrc.nist.gov/csrc/media/Projects/pqc-dig-sig/documents/UOV_Specification_R3.pdf',
+		note: 'Table 1 is the source of the uov-Ip sizes on this page: (119, 45) over F256, a 321,300 B expanded public key, a 278,087 B expanded secret key and a 135 B signature. Version 2.0 (February 2025) had (112, 44) with 278,432 / 237,896 / 128 B.',
 	},
 ];
 
