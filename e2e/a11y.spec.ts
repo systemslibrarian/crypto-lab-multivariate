@@ -23,6 +23,8 @@ import {
  * largest parameter set, where the matrix becomes 12 x 12; a 140-character
  * unbroken token in the message field; Reset; the Kipnis-Shamir forge attack at
  * both balanced sizes, so the BROKEN and HELD verdicts are both painted; the
+ * hiding-maps exhibit at both layer shapes, so its forged and not-forged cards
+ * are both painted; the
  * guided tour, which dims the scoreboard and the back-to-top button to
  * `opacity: 0.4` for its whole length; and the back-to-top button, which only
  * exists past 600px of scroll. Every one of those states is scanned in

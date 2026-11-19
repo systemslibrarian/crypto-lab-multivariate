@@ -2,6 +2,21 @@
 import { keygen, sign, verify, hashMessage, evalMap, type UovKeys, type SignTrace, type Quad } from './uov.ts';
 import { kipnisShamirAttack, publicPartOf, type AttackResult } from './attack.ts';
 import {
+	centralMap,
+	dimensions,
+	equationsSatisfied,
+	forgeFromPublicKey,
+	layerBounds,
+	publishLayered,
+	recoveredCentralMap,
+	signLayered,
+	verifyLayered,
+	type ForgeAttempt,
+	type LayeredKeyPair,
+	type LayeredParams,
+	type LayeredPublicKey,
+} from './layered.ts';
+import {
 	SCHEMES,
 	BEULLENS_STORY,
 	SIG_COMPARE,
@@ -365,6 +380,7 @@ function renderSectionNav(): HTMLElement {
 			<a href="#playground-heading" data-section="playground"><span aria-hidden="true">▶</span> Live demo</a>
 			<a href="#attack-heading" data-section="attack"><span aria-hidden="true">⚡</span> The break</a>
 			<a href="#forge-heading" data-section="forge"><span aria-hidden="true">⚔</span> Break it yourself</a>
+			<a href="#hiding-heading" data-section="hiding-maps"><span aria-hidden="true">◇</span> Hiding maps</a>
 			<a href="#schemes-heading" data-section="schemes"><span aria-hidden="true">▤</span> Lineage</a>
 			<a href="#compare-heading" data-section="compare"><span aria-hidden="true">▥</span> Compare</a>
 		</div>
@@ -1294,6 +1310,217 @@ function renderForgeAttack(): HTMLElement {
 				balanced.succeeded
 					? 'Attack finished: the balanced key was broken and a forged signature verified.'
 					: 'Attack finished: the balanced key was not broken on this run.',
+			);
+			btn.disabled = false;
+		}, 0);
+	});
+
+	return section;
+}
+
+/**
+ * Exhibit: the same layered map, published with and without its hiding maps.
+ *
+ * The Kipnis–Shamir exhibit above has to RECOVER a hidden subspace. This one
+ * recovers nothing. One layered central map is generated and published twice:
+ * as Tout . F . Tin with secret maps, and as F composed only with a coordinate
+ * permutation whose seed is in the public key. One forger, whose only argument
+ * is a public key, is run on both.
+ *
+ * It is a MODEL of the round-one NGCC candidate Origami, whose specification
+ * leaves Tin and Tout out, and of the forgery of Louiso, Guo, Li, Pébereau, Tao
+ * and Ding. Nothing here is Origami's field, structure, parameters or code; the
+ * page says so, and says which figures belong to the real case and where each
+ * is printed. Every count and verdict in the two cards is measured in the run.
+ */
+const HIDING_SHAPES: Record<string, { params: LayeredParams; label: string }> = {
+	small: { params: { v: 4, layers: [3, 3, 2] }, label: 'Three layers: 4 vinegar, then 3, 3, 2 oil' },
+	// CL5356 Section 8 reads Origami-128 as (v1; o1..o4) = (96; 32, 32, 32, 8).
+	eighth: { params: { v: 12, layers: [4, 4, 4, 1] }, label: 'Four layers: 12 vinegar, then 4, 4, 4, 1 oil' },
+};
+
+function renderHidingMaps(): HTMLElement {
+	const section = el('section', 'lab-section');
+	section.id = 'hiding-maps';
+	section.setAttribute('aria-labelledby', 'hiding-heading');
+	const shapeOptions = Object.entries(HIDING_SHAPES)
+		.map(([key, shape], i) => `<option value="${key}"${i === 0 ? ' selected' : ''}>${shape.label}</option>`)
+		.join('');
+	section.innerHTML = `
+    <div class="section-heading-row">
+      <div>
+        <p class="section-kicker">Nothing to recover</p>
+        <h2 id="hiding-heading">A Layered Map With the Hiding Maps Left Out</h2>
+        <p class="section-footnote">Louiso, Guo, Li, P&eacute;bereau, Tao &amp; Ding, &ldquo;A Universal Forgery Attack on the Origami Signature Scheme from the Public Key Alone&rdquo; (October 2026, <a href="https://eprint.iacr.org/2026/2390" target="_blank" rel="noopener noreferrer">ePrint 2026/2390</a>) — the real case this exhibit models at toy size.</p>
+      </div>
+    </div>
+    <p class="panel-copy">${dual(
+			`The attack above had to recover a hidden oil subspace before it could forge. Here there is nothing to recover. A layered Oil-and-Vinegar map, the Rainbow construction from <a href="#attack-heading">How Rainbow Fell</a>, is easy to invert on purpose: fix the vinegar, and each layer is linear in its own oil variables once the earlier layers are solved. Two secret linear maps keep that easy inversion to the signer: the public key is <strong>T<sub>out</sub> ∘ F ∘ T<sub>in</sub></strong>. This exhibit generates one layered central map F and publishes it twice: once with secret T<sub>in</sub> and T<sub>out</sub>, and once with only a reordering of the coordinates that anyone can recompute from a seed in the public key. One forger, a function whose only input is a public key, is then run on both.`,
+			`A layered scheme has a signing shortcut built in. Two secret scrambling steps normally hide the shortcut from everyone but the signer. This makes one such scheme and publishes it twice: once properly scrambled, and once with only a shuffle whose recipe is printed in the public key. The same attacker then tries both.`,
+		)}</p>
+    <div class="warning-banner" role="note">
+      <span class="warning-banner__icon" aria-hidden="true">⚠️</span>
+      <span id="hiding-model"><strong>Modelled, at toy scale.</strong> Everything that runs here is a toy written for this lab: a random layered map over GF(256) with 12 or 25 variables. It is not Origami. It does not use Origami's field (F<sub>16</sub>), its zones, its hidden local algebras, its key compression or any of its code, and it reproduces none of its test vectors. It shares one structural fact with the real case, the one the attack uses: the layered map is published in coordinates anyone can compute. The attack on Origami itself is not run in this lab.</span>
+    </div>
+    <div class="param-row" role="group" aria-label="Layered map parameters">
+      <label for="hiding-shape">
+        <span class="param-row__name">Layer shape</span>
+        <select id="hiding-shape">${shapeOptions}</select>
+      </label>
+      <button id="hiding-btn" class="action-button" type="button">
+        <span aria-hidden="true">⚡</span> <span>Publish both ways and forge</span>
+      </button>
+    </div>
+    <p class="section-footnote" id="hiding-shape-note">The four-layer shape is the signer's view of Origami-128 at one-eighth scale: the paper reads Origami-128 as 96 vinegar variables followed by oil blocks of 32, 32, 32 and 8 (&sect;8). The field, and everything else, is still this lab's.</p>
+    <div id="hiding-out" class="forge-out" aria-live="polite">
+      <p class="trace-empty">Nothing run yet. Press <strong>Publish both ways and forge</strong> to generate one layered map, publish it with and without hiding maps, and hand both public keys to the same forger.</p>
+    </div>
+    <h3 id="hiding-real-heading">The real case: Origami, in the first round of NGCC</h3>
+    <p class="panel-copy">Origami is a multivariate signature candidate (sign-18) in the first round of NGCC, the open post-quantum competition run by China's Institute of Commercial Cryptography Standards (ICCS). Its round-one specification, dated 26 June 2026, builds a layered central map over F<sub>16</sub> and composes it only with a coordinate permutation, which the specification calls &ldquo;public because it is derived from the public expansion seed&rdquo; (&sect;2.5.6). Its security analysis says: &ldquo;The current construction does not instantiate external input/output linear hiding maps T<sub>in</sub> and T<sub>out</sub>&rdquo; (&sect;4).</p>
+    <p class="panel-copy">Louiso, Guo, Li, P&eacute;bereau, Tao and Ding showed in October 2026 that the public key then &ldquo;gives an equivalent secret key, allowing signature forgery at about the cost of one verification (about 0.01 s at Origami-128)&rdquo; (abstract). Their Algorithm 1 is what the toy above does: rebuild the map as the verifier does, undo the public permutation, and solve the layers in order. Origami-128 has 200 variables and 104 equations, and there &ldquo;each main zone is a 32 &times; 40 solve and the tail an 8 &times; 8 solve&rdquo; (&sect;4). Against the unmodified reference verifier, 300 of 300 forgeries at Origami-128 were accepted and all three negative controls rejected every time; the other three parameter sets gave the same result on smaller samples (Table 2).</p>
+    <p class="panel-copy" id="hiding-structural"><strong>This is not a parameter problem.</strong> The specification lists Origami-128 with a 128-bit classical and a 64-bit quantum security target (&sect;3.2, Table 2). The forgery is unrelated to either figure. It is a classical attack on the structure of the public key and uses no quantum computer. Larger parameters enlarge the forger's linear systems along with the cost of honest verification, and the paper reports: &ldquo;None of the four submitted parameter sets prevents the practical forgery&rdquo; (&sect;8).</p>
+    <p class="panel-copy" id="hiding-lesson"><strong>The lesson.</strong> In a layered scheme the central map is easy to invert by design. The secret maps around it can look redundant: they add key material, and the signer has to undo them for every signature. They are also the only thing that keeps the easy inversion to the signer. Remove that layer and the trapdoor is no longer hidden: the public key is the signing key. The specification's stated aim was to keep the signing structure in the secret key while publishing &ldquo;a flattened and externally mixed&rdquo; map (abstract); the paper shows that the published map still has its layers in a publicly computable order.</p>
+    <p class="panel-copy" id="hiding-held-scope"><strong>What &ldquo;not forged&rdquo; means above.</strong> It means this forger needs the layer order handed to it. It is not a claim that a layered map with hiding maps is secure. Rainbow had both secret maps and was broken by the attacks in <a href="#attack-heading">How Rainbow Fell</a>. The paper says that restoring the maps to Origami would give &ldquo;a sparse Rainbow-type construction&rdquo; that would need to be assessed against those attacks, and that its authors &ldquo;do not claim an attack on a hypothetical version with both secret maps&rdquo; (&sect;8).</p>
+    <p class="panel-copy">Where the secret stays in the key: UOV, MAYO and QR-UOV also publish a seed plus a small residual, but they compute the residual from the secret oil space, so the public map is tied to something an attacker has to recover (&sect;8). <a href="https://systemslibrarian.github.io/crypto-lab-mayo-seal/">MAYO Seal</a> runs that construction.</p>
+    <p class="panel-copy" id="hiding-status"><strong>Status.</strong> As of November 2026, NGCC is in its first round; the ICCS proposal pages list Round 1 candidates only (checked 18 November 2026). The paper records that the designers acknowledged the forgery on the ICCS forum on 24 September 2026 and promised an updated algorithm (&sect;1). Everything here describes the round-one submission of 26 June 2026, and a revised Origami may differ. Nothing in round one is standardized or deployed, and finding problems of this kind early is what an open first round is for. The public tracker records the forgery as <a href="https://ngcc.dev/reports/sign-18.html" target="_blank" rel="noopener noreferrer">sign-18-5</a>, classed as design and confirmed, dated 24 September 2026.</p>
+    <p class="section-footnote">Sources. Louiso et al.: abstract, &sect;1, &sect;4 (Algorithm 1 and cost), &sect;5 (Table 2), &sect;8. Origami round-one specification, 26 June 2026: abstract, &sect;2.5.6, &sect;3.2 (Table 2), &sect;4. NGCC candidate report sign-18 at ngcc.dev, read 18 November 2026.</p>
+  `;
+
+	const $ = (id: string) => section.querySelector('#' + id) as HTMLElement;
+	const btn = $('hiding-btn') as HTMLButtonElement;
+	const shapeSel = $('hiding-shape') as HTMLSelectElement;
+	const out = $('hiding-out');
+
+	const stage = (ok: boolean, name: string, detail: string): string =>
+		`<li class="forge-stage ${ok ? 'forge-stage--ok' : 'forge-stage--bad'}">
+        <span class="forge-stage__mark" aria-hidden="true">${ok ? '✓' : '✗'}</span>
+        <span class="forge-stage__body"><strong>${name}</strong><br />${detail}</span>
+      </li>`;
+
+	const structureLines = (attempt: ForgeAttempt): string =>
+		attempt.structure
+			.map(
+				(layer) =>
+					`Layer ${layer.layer + 1}: ${layer.equations} equation${layer.equations === 1 ? '' : 's'}, ${layer.oilOilTerms} oil×oil coefficient${layer.oilOilTerms === 1 ? '' : 's'}, ${layer.laterTerms} on later variables.`,
+			)
+			.join('<br />');
+
+	const card = (
+		pair: LayeredKeyPair,
+		attempt: ForgeAttempt,
+		target: number[],
+		elapsedMs: number,
+		F: Quad[],
+	): string => {
+		const publicKey = pair.publicKey;
+		const params = publicKey.params;
+		const { n, m } = dimensions(params);
+		const exposed = publicKey.publication === 'exposed';
+		const sizes = layerBounds(params)
+			.map((b) => `${b.oil} × ${b.oil}`)
+			.join(', ');
+		const satisfied = attempt.signature ? equationsSatisfied(publicKey, target, attempt.signature) : 0;
+		const linearLayers = attempt.structure.filter((layer) => layer.linearInOil).length;
+		const layerCount = attempt.structure.length;
+
+		const stages = [
+			exposed
+				? stage(
+						true,
+						'Undo the public permutation',
+						`The key carries the seed <code>0x${(publicKey.permutationSeed as number).toString(16).padStart(8, '0')}</code>. The order of all ${n} coordinates is recomputed from it. No secret is involved.`,
+					)
+				: stage(
+						false,
+						'Look for something public to undo',
+						`The key carries no seed. T<sub>in</sub> and T<sub>out</sub> are secret, so the forger can only read the public map in the coordinates it was given.`,
+					),
+			stage(
+				attempt.layered,
+				'Read the layer structure',
+				`${structureLines(attempt)}<br />${linearLayers} of ${layerCount} layers are linear in their own oil block.`,
+			),
+			stage(
+				exposed && attempt.signature !== null,
+				exposed ? 'Solve the layers in order' : 'Solve as if it were layered anyway',
+				exposed
+					? `${layerCount} linear solves of sizes ${sizes}, with the routine the signer uses. Vinegar draws needed: ${attempt.passes}.`
+					: `The solver skips the terms that break linearity and returns a vector each time. Vinegar draws used: ${attempt.passes}.`,
+			),
+			stage(
+				attempt.accepted,
+				'Ask the public verifier',
+				`${satisfied} of ${m} public equations hold: the verifier ${attempt.accepted ? 'ACCEPTED' : 'REJECTED'} it.`,
+			),
+		].join('');
+
+		const verdict = attempt.accepted
+			? `<p class="forge-verdict forge-verdict--broken" data-hiding-verdict="forged"><strong>FORGED.</strong> The public verifier accepted a signature computed from the public key alone, in ${fmtMs(elapsedMs)}.</p>`
+			: `<p class="forge-verdict forge-verdict--held" data-hiding-verdict="held"><strong>NOT FORGED by this method.</strong> The same forger produced nothing the verifier accepts, after ${fmtMs(elapsedMs)}. This is not a security claim; see below.</p>`;
+
+		let extra = '';
+		if (exposed && attempt.accepted && attempt.signature) {
+			const recovered = recoveredCentralMap(publicKey) as Quad[];
+			const same = recovered.filter((Q, i) => JSON.stringify(Q) === JSON.stringify(F[i])).length;
+			const changed = attempt.signature.slice();
+			changed[0] ^= 0x01;
+			const controlByte = verifyLayered(publicKey, target, changed);
+			const controlMessage = verifyLayered(publicKey, hashMessage('a different message', m), attempt.signature);
+			const honest = signLayered(pair, target).signature;
+			const differing = honest.filter((b, i) => b !== attempt.signature![i]).length;
+			extra = `<p class="panel-copy" data-hiding-field="controls">Controls, judged by the same verifier: one forged byte changed, ${controlByte ? 'ACCEPTED' : 'rejected'}; the same forgery against a different message, ${controlMessage ? 'ACCEPTED' : 'rejected'}.</p>
+      <p class="panel-copy" data-hiding-field="recovered">Checked for you with the secret key, which the forger never saw: the map it read off the public key equals the signer's central map in ${same} of ${m} polynomials. The forgery differs from the signer's own signature on this message in ${differing} of ${n} bytes, so it is not a replay.</p>
+      <p class="section-footnote hiding-caption">The forged signature</p>
+      <div class="byte-grid-wrap">${byteGrid(attempt.signature, { label: 'Forged signature', id: 'hiding-sig-forged' })}</div>
+      <p class="section-footnote hiding-caption">The signer's own signature on the same message</p>
+      <div class="byte-grid-wrap">${byteGrid(honest, { label: "The signer's signature on the same message", id: 'hiding-sig-honest' })}</div>`;
+		}
+		if (!exposed) {
+			const honest = signLayered(pair, target).signature;
+			const honestOk = verifyLayered(publicKey, target, honest);
+			extra = `<p class="panel-copy" data-hiding-field="honest">The trapdoor still works for its owner: the signer, who holds T<sub>in</sub> and T<sub>out</sub>, signs the same message and the verifier ${honestOk ? 'ACCEPTED' : 'REJECTED'} it.</p>`;
+		}
+
+		return `<article class="panel-card hiding-card" data-hiding-case="${publicKey.publication}">
+      <div class="panel-header"><h3>${exposed ? 'Published with only a public permutation' : 'Published with secret hiding maps'}</h3></div>
+      <p class="panel-copy">${exposed ? 'Public key = F with its coordinates reordered, plus the seed of the reordering.' : 'Public key = T<sub>out</sub> ∘ F ∘ T<sub>in</sub>. The two maps are in the secret key.'} ${n} variables, ${m} equations over GF(256).</p>
+      <ol class="forge-stages" role="list">${stages}</ol>
+      ${verdict}
+      ${extra}
+    </article>`;
+	};
+
+	btn.addEventListener('click', () => {
+		const shape = HIDING_SHAPES[shapeSel.value] ?? HIDING_SHAPES.small;
+		btn.disabled = true;
+		out.innerHTML = '<p class="trace-empty">Generating one layered map, publishing it both ways and running the forger…</p>';
+		// Yield once so the "running" state paints before the synchronous work.
+		window.setTimeout(() => {
+			const params = shape.params;
+			const { m } = dimensions(params);
+			const F = centralMap(params);
+			const target = hashMessage('forge me', m);
+			const run = (pair: LayeredKeyPair): { attempt: ForgeAttempt; elapsedMs: number } => {
+				// The forger is handed a JSON copy of the public key and nothing else.
+				const publicOnly = JSON.parse(JSON.stringify(pair.publicKey)) as LayeredPublicKey;
+				const started = performance.now();
+				const attempt = forgeFromPublicKey(publicOnly, target);
+				return { attempt, elapsedMs: performance.now() - started };
+			};
+			const exposedPair = publishLayered(F, params, 'exposed');
+			const hiddenPair = publishLayered(F, params, 'hidden');
+			const exposed = run(exposedPair);
+			const hidden = run(hiddenPair);
+
+			out.innerHTML = `<div class="forge-grid">
+        ${card(exposedPair, exposed.attempt, target, exposed.elapsedMs, F)}
+        ${card(hiddenPair, hidden.attempt, target, hidden.elapsedMs, F)}
+      </div>
+      <p class="section-footnote">Both keys wrap the same central map and went to the same function, which takes a public key and a message and nothing else. Every number and verdict above was measured during this run, on this lab's toy and not on Origami.</p>`;
+			announce(
+				exposed.attempt.accepted && !hidden.attempt.accepted
+					? 'Finished: the key published without hiding maps was forged from the public key alone, and the key with hiding maps was not.'
+					: `Finished: without hiding maps the forgery was ${exposed.attempt.accepted ? 'accepted' : 'rejected'}; with hiding maps it was ${hidden.attempt.accepted ? 'accepted' : 'rejected'}.`,
 			);
 			btn.disabled = false;
 		}, 0);
@@ -2446,11 +2673,12 @@ export function mountApp(root: HTMLDivElement): void {
 	const playground = renderPlayground();
 	const attack = renderAttack();
 	const forge = renderForgeAttack();
+	const hiding = renderHidingMaps();
 	const citations = renderCitations();
 	const schemes = renderSchemes();
 	const compare = renderCompare();
 	const footer = renderFooter();
-	main.append(hero, nav, playground, attack, forge, citations, schemes, compare, footer);
+	main.append(hero, nav, playground, attack, forge, hiding, citations, schemes, compare, footer);
 	root.appendChild(main);
 	const backToTop = renderBackToTop();
 	document.body.appendChild(backToTop);
@@ -2460,7 +2688,7 @@ export function mountApp(root: HTMLDivElement): void {
 	wireCopyButtons(main);
 	wireShortcutsPanel(main);
 	wireShareButton();
-	wireSectionNavObserver(nav, [playground, attack, forge, schemes, compare]);
+	wireSectionNavObserver(nav, [playground, attack, forge, hiding, schemes, compare]);
 	wireScrollReveal(main);
 	wireBackToTop(backToTop);
 	wireTextModeToggle();

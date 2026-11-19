@@ -336,7 +336,7 @@ export async function boot(page: Page, theme: 'dark' | 'light'): Promise<void> {
   // Everything below `#app` is built by `src/ui.ts`, so a navigation that
   // resolves proves nothing.
   await expect(page.locator('h1.cl-hero-title')).toContainText('Oil');
-  await expect(page.locator('main#main-content > section.lab-section')).toHaveCount(6);
+  await expect(page.locator('main#main-content > section.lab-section')).toHaveCount(7);
 
   // ── The keypair the page generates for itself, before any interaction ────
   await expect(page.locator('#key-status')).toContainText('Keypair ready');
@@ -359,6 +359,7 @@ export async function boot(page: Page, theme: 'dark' | 'light'): Promise<void> {
   await expect(page.locator('#osel')).toHaveValue('3');
   await expect(page.locator('#msg')).toHaveValue(new RegExp(DEFAULT_MSG_FRAGMENT));
   await expect(page.locator('#forge-m')).toHaveValue('3');
+  await expect(page.locator('#hiding-shape')).toHaveValue('small');
   await expect(page.locator('#poly-select option')).toHaveCount(3);
   await expect(page.locator('#text-mode-toggle')).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#audience-toggle')).toHaveAttribute('aria-pressed', 'false');
@@ -381,6 +382,7 @@ export async function boot(page: Page, theme: 'dark' | 'light'): Promise<void> {
   await expect(page.locator('.back-to-top')).toBeHidden();
   await expect(page.locator('#result-modal')).toHaveCount(0);
   await expect(page.locator('.forge-card')).toHaveCount(0);
+  await expect(page.locator('.hiding-card')).toHaveCount(0);
   await expect(page.locator('.scenario-card .scenario-status--pending')).toHaveCount(3);
 
   await settle(page);
@@ -967,6 +969,24 @@ export async function driveAllStates(page: Page, theme: string): Promise<void> {
   await expect(page.locator('.forge-card')).toHaveCount(2, { timeout: 120_000 });
   await expect(page.locator('#forge-btn')).toBeEnabled();
   await scanAt('the same attack at v = o = 4');
+
+  // ── The hiding-maps exhibit: one layered map published two ways ────────
+  // Both verdicts are painted in one run, and the exposed card is the only
+  // place the two captioned signature grids and the seed's <code> exist. The
+  // second shape is the wider one: 25 byte cells per grid and four stage rows.
+  await page.locator('#hiding-btn').click();
+  await expect(page.locator('.hiding-card')).toHaveCount(2, { timeout: 60_000 });
+  await expect(page.locator('#hiding-btn')).toBeEnabled();
+  await expect(page.locator('[data-hiding-case="exposed"] [data-hiding-verdict="forged"]')).toBeVisible();
+  await expect(page.locator('[data-hiding-case="hidden"] [data-hiding-verdict="held"]')).toBeVisible();
+  await expect(page.locator('#hiding-sig-forged .byte-cell')).toHaveCount(12);
+  await scanAt('the layered map published two ways: forged without hiding maps, not forged with them');
+
+  await page.selectOption('#hiding-shape', 'eighth');
+  await page.locator('#hiding-btn').click();
+  await expect(page.locator('#hiding-sig-forged .byte-cell')).toHaveCount(25, { timeout: 60_000 });
+  await expect(page.locator('#hiding-btn')).toBeEnabled();
+  await scanAt('the same exhibit at the four-layer shape, 25 variables');
 
   // ── The guided tour: a whole-page mode that dims two fixed elements ─────
   await page.locator('#tour-start').click();

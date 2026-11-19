@@ -2171,6 +2171,44 @@
 	font-size: 0.9rem;
 }
 
+/* ============================================================
+   Hiding-maps exhibit (the layered map published two ways)
+   ============================================================ */
+
+/* In-copy links, named once.
+   These took the browser's default link colour, which followed the visitor's
+   system while index.html declared `color-scheme: light dark`: #0000EE for a
+   light system, roughly 2:1 on these panels. The cause is fixed at the root
+   (`color-scheme: dark` on <html>, and the meta tag), which also covers links
+   that carry neither of these classes. This rule stays so that prose links use
+   the page's accent ink rather than a browser default of either scheme.
+   `e2e/hiding-maps.spec.ts` and `e2e/system-preference.spec.ts` check both. */
+.panel-copy a,
+.section-footnote a {
+	color: var(--accent);
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+#hiding-maps > h3 {
+	margin: 1.75rem 0 0;
+	font-size: 1.15rem;
+}
+
+.hiding-card code {
+	font-family: var(--mono);
+	font-size: 0.92em;
+}
+
+.hiding-caption {
+	margin-top: 1rem;
+	font-size: 0.82rem;
+}
+
+.hiding-caption + .byte-grid-wrap {
+	margin-top: 6px;
+}
+
 /* The book glyph is drawn here rather than as DOM text. axe 4.14's
    label-content-name-mismatch (WCAG 2.5.3 Label in Name) compares a control's
    accessible name against what a SIGHTED user sees, and it excludes

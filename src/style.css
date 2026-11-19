@@ -105,6 +105,13 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 96px;
+  /* Dark is the only theme (audits/_MASTER-TEMPLATE.md: "`color-scheme: dark`/
+     `light` per theme", and never `prefers-color-scheme`). This is what makes
+     the browser's own defaults dark for everyone: link ink, form controls,
+     scrollbars. Without it, and with `light dark` in the meta tag, a visitor
+     whose SYSTEM is set to light got default-blue links at about 1.9:1 on these
+     panels. `e2e/system-preference.spec.ts` holds the page to it. */
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {
