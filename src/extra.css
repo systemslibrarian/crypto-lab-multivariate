@@ -2176,12 +2176,13 @@
    ============================================================ */
 
 /* In-copy links, named once.
-   The page is dark-only, but index.html declares `color-scheme: light dark`, so
-   a link with no colour of its own takes the browser's LIGHT-scheme default
-   (#0000EE) for any visitor whose system is set to light: roughly 2:1 on these
-   panels. The WCAG gate emulates a dark system, where the default is a pale
-   blue, so it could not see that. `e2e/hiding-maps.spec.ts` asserts this rule
-   under a light system preference. */
+   These took the browser's default link colour, which followed the visitor's
+   system while index.html declared `color-scheme: light dark`: #0000EE for a
+   light system, roughly 2:1 on these panels. The cause is fixed at the root
+   (`color-scheme: dark` on <html>, and the meta tag), which also covers links
+   that carry neither of these classes. This rule stays so that prose links use
+   the page's accent ink rather than a browser default of either scheme.
+   `e2e/hiding-maps.spec.ts` and `e2e/system-preference.spec.ts` check both. */
 .panel-copy a,
 .section-footnote a {
 	color: var(--accent);

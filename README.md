@@ -84,6 +84,7 @@ npm run test:a11y  # axe-core WCAG A/AA gate (Playwright)
 
 - **`src/layered.test.ts`** — the layered-map toy, checked in both directions: every forgery tried from an exposed public key is accepted by the verifier (60 keys across two shapes) while a changed byte and a different message are rejected; the identical forger gets nothing accepted on 60 keys published with hiding maps, where the honest signer still signs; one central map published both ways gives the two outcomes side by side; the map read off an exposed key equals the secret central map coefficient for coefficient; a singular layer restarts from the first layer. The forger is handed a JSON copy of the public key, so it cannot reach the secret half.
 - **`e2e/hiding-maps.spec.ts`** (Playwright) — the same two outcomes on the page at both layer shapes, the model label, the dated status line, each quoted real-case figure, and in-copy link ink under a light system preference.
+- **`e2e/system-preference.spec.ts`** (Playwright) — the page is dark-only, so the visitor's system preference must change nothing: every visible link computes to the same colour under a light system as under a dark one, the root's used colour scheme is `dark`, and the gate's arithmetic contrast walk finds nothing under a light system. The WCAG gate itself emulates a dark system only.
 
 ## Hiding-Maps Exhibit: Sources, Versions and Scope
 
